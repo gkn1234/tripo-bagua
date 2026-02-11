@@ -25,15 +25,13 @@ const MOCK_RESPONSES = [
   },
 ]
 
-let responseIndex = 0
-
 export async function POST(req: NextRequest) {
   const { messages } = await req.json()
-  const isFirstMessage = messages.length <= 1
 
-  // 根据对话轮次选择响应
-  const mockResponse = MOCK_RESPONSES[Math.min(responseIndex, MOCK_RESPONSES.length - 1)]
-  responseIndex = isFirstMessage ? 0 : responseIndex + 1
+  // 根据用户消息数量选择响应（每2条消息=1轮对话）
+  const userMessageCount = messages.filter((m: { role: string }) => m.role === 'user').length
+  const responseIdx = Math.min(userMessageCount - 1, MOCK_RESPONSES.length - 1)
+  const mockResponse = MOCK_RESPONSES[Math.max(0, responseIdx)]
 
   // 创建流式响应
   const encoder = new TextEncoder()
