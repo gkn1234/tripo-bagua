@@ -55,6 +55,7 @@ const generateMascot = tool({
       return {
         success: true,
         modelUrl: result.output?.model,
+        renderedImage: result.output?.rendered_image,
         taskId,
       }
     }
