@@ -1,6 +1,7 @@
 'use client'
 
-import { Send } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Moon, Send, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -12,6 +13,24 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputProps) {
+  const [isDark, setIsDark] = useState(false)
+
+  useEffect(() => {
+    // Check initial theme from localStorage or system preference
+    const stored = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const dark = stored === 'dark' || (!stored && prefersDark)
+    setIsDark(dark)
+    document.documentElement.classList.toggle('dark', dark)
+  }, [])
+
+  const toggleTheme = () => {
+    const newDark = !isDark
+    setIsDark(newDark)
+    document.documentElement.classList.toggle('dark', newDark)
+    localStorage.setItem('theme', newDark ? 'dark' : 'light')
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -21,6 +40,15 @@ export function ChatInput({ value, onChange, onSubmit, isLoading }: ChatInputPro
 
   return (
     <form onSubmit={onSubmit} className="flex gap-2">
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        onClick={toggleTheme}
+        className="shrink-0"
+      >
+        {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      </Button>
       <Textarea
         value={value}
         onChange={e => onChange(e.target.value)}
