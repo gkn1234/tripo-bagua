@@ -17,14 +17,14 @@ export default function Home() {
       <div
         className={cn(
           'h-full overflow-hidden transition-all duration-400 ease-out',
-          phase === 'chat' ? 'w-full' : 'w-[40%] border-r border-border',
+          phase === 'chat' ? 'w-full' : 'w-[60%] border-r border-border',
         )}
       >
         <Chat />
       </div>
 
       {phase === 'split' && modelUrl && (
-        <div className="relative h-full w-[60%] overflow-hidden">
+        <div className="relative h-full w-[40%] overflow-hidden">
           <ModelViewer modelUrl={modelUrl} />
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
             <Button size="lg" onClick={() => setOrderModalOpen(true)}>
