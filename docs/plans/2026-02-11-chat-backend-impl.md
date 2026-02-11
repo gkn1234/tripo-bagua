@@ -4,7 +4,7 @@
 
 **Goal:** Implement the chat backend API with DeepSeek integration, Bazi analysis tool, and Tripo 3D generation tool.
 
-**Architecture:** Next.js API Route using Vercel AI SDK's `streamText` with multi-step tool execution. Two tools: `analyzeBazi` (powered by tyme4ts + cantian-tymext) and `generateMascot` (Tripo API with internal polling). LLM infers 喜用神 from structured bazi data.
+**Architecture:** Next.js API Route using Vercel AI SDK's `streamText` with multi-step tool execution. Two tools: `analyzeBazi` (powered by tyme4ts + cantian-tymext) and `generateMascot` (Tripo API with internal polling). LLM infers favorable elements from structured bazi data.
 
 **Tech Stack:** `ai@5`, `@ai-sdk/deepseek`, `tyme4ts`, `cantian-tymext`, `zod`
 
@@ -62,29 +62,29 @@ export interface BaziInput {
 }
 
 export interface TianGan {
-  name: string;      // 天干名，如 "甲"
-  wuXing: string;    // 五行，如 "木"
-  yinYang: string;   // 阴阳，如 "阳"
-  shiShen?: string;  // 十神，如 "正官"（日柱天干无十神）
+  name: string;      // Heavenly Stem name, e.g. "甲"
+  wuXing: string;    // Five Elements, e.g. "木" (Wood)
+  yinYang: string;   // Yin/Yang, e.g. "阳" (Yang)
+  shiShen?: string;  // Ten Gods, e.g. "正官" (day pillar has no shiShen)
 }
 
 export interface CangGan {
-  name: string;      // 藏干名，如 "甲"
-  shiShen: string;   // 十神
+  name: string;      // Hidden Stem name, e.g. "甲"
+  shiShen: string;   // Ten Gods
 }
 
 export interface DiZhi {
-  name: string;       // 地支名，如 "寅"
-  wuXing: string;     // 五行
-  yinYang: string;    // 阴阳
-  cangGan: CangGan[]; // 藏干（主气、中气、余气）
+  name: string;       // Earthly Branch name, e.g. "寅"
+  wuXing: string;     // Five Elements
+  yinYang: string;    // Yin/Yang
+  cangGan: CangGan[]; // Hidden Stems (main, middle, residual qi)
 }
 
 export interface Pillar {
-  ganZhi: string;     // 干支，如 "甲寅"
+  ganZhi: string;     // Stem-Branch pair, e.g. "甲寅"
   tianGan: TianGan;
   diZhi: DiZhi;
-  naYin: string;      // 纳音，如 "大溪水"
+  naYin: string;      // Na Yin (sound), e.g. "大溪水"
 }
 
 export interface FourPillars {
@@ -111,26 +111,26 @@ export interface DecadeFortune {
 }
 
 export interface BaziResult {
-  // 基础信息
+  // Basic info
   solar: string;
   lunar: string;
   bazi: string;
   zodiac: string;
   dayMaster: string;
 
-  // 四柱详情
+  // Four Pillars detail
   fourPillars: FourPillars;
 
-  // 五行统计
+  // Five Elements count
   fiveElements: FiveElements;
 
-  // 神煞
+  // Spirit Sha (gods)
   gods: Record<string, string[]>;
 
-  // 大运
+  // Decade Fortunes
   decadeFortunes: DecadeFortune[];
 
-  // 刑冲合会
+  // Punishment/Clash/Combination relations
   relations: Record<string, unknown>;
 }
 ```
@@ -224,11 +224,11 @@ export function countFiveElements(fourPillars: FourPillars): FiveElements {
   const counts: FiveElements = { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 };
 
   for (const pillar of Object.values(fourPillars)) {
-    // 天干五行
+    // Heavenly Stem element
     const stemElement = WUXING_MAP[pillar.tianGan.wuXing];
     if (stemElement) counts[stemElement]++;
 
-    // 地支五行
+    // Earthly Branch element
     const branchElement = WUXING_MAP[pillar.diZhi.wuXing];
     if (branchElement) counts[branchElement]++;
   }
@@ -267,7 +267,7 @@ import { calculateBazi } from '../index';
 
 describe('calculateBazi', () => {
   it('calculates bazi for a known date', () => {
-    // 1998年7月31日 14:10 → 戊寅 己未 己卯 辛未
+    // 1998-07-31 14:10 -> 戊寅 己未 己卯 辛未
     const result = calculateBazi({
       year: 1998,
       month: 7,
@@ -337,26 +337,26 @@ import { calculateRelation, getShen } from 'cantian-tymext';
 import { countFiveElements } from './five-elements';
 import type { BaziInput, BaziResult, Pillar, DecadeFortune } from './types';
 
-// 使用"早子时当天"的八字算法
+// Use "early zi hour = current day" algorithm (more common)
 LunarHour.provider = new LunarSect2EightCharProvider();
 
 export function calculateBazi(input: BaziInput): BaziResult {
   const { year, month, day, hour, minute = 0, gender = 1 } = input;
 
-  // 1. 公历 → SolarTime → LunarHour → EightChar
+  // 1. Solar date -> SolarTime -> LunarHour -> EightChar
   const solarTime = SolarTime.fromYmdHms(year, month, day, hour, minute, 0);
   const lunarHour = solarTime.getLunarHour();
   const eightChar = lunarHour.getEightChar();
 
-  // 2. 获取四柱
+  // 2. Get four pillars
   const yearPillar = eightChar.getYear();
   const monthPillar = eightChar.getMonth();
   const dayPillar = eightChar.getDay();
   const hourPillar = eightChar.getHour();
 
-  const me = dayPillar.getHeavenStem(); // 日主
+  const me = dayPillar.getHeavenStem(); // Day Master
 
-  // 3. 构建四柱详细数据
+  // 3. Build detailed pillar data
   const fourPillars = {
     year: buildPillarDetail(yearPillar, me, 'year'),
     month: buildPillarDetail(monthPillar, me, 'month'),
@@ -364,16 +364,16 @@ export function calculateBazi(input: BaziInput): BaziResult {
     hour: buildPillarDetail(hourPillar, me, 'hour'),
   };
 
-  // 4. 神煞
+  // 4. Spirit Sha (gods)
   const baziStr = eightChar.toString();
   let gods: Record<string, string[]> = {};
   try {
     gods = getShen(baziStr, gender);
   } catch {
-    // cantian-tymext 可能抛出异常，忽略
+    // cantian-tymext may throw, ignore
   }
 
-  // 5. 刑冲合会
+  // 5. Punishment/Clash/Combination relations
   let relations: Record<string, unknown> = {};
   try {
     relations = calculateRelation({
@@ -383,21 +383,21 @@ export function calculateBazi(input: BaziInput): BaziResult {
       hour: hourPillar.toString(),
     });
   } catch {
-    // 忽略异常
+    // Ignore exception
   }
 
-  // 6. 大运
+  // 6. Decade fortunes
   const genderEnum = gender === 1 ? Gender.MALE : Gender.FEMALE;
   const decadeFortunes = buildDecadeFortunes(solarTime, genderEnum, me);
 
-  // 7. 五行统计
+  // 7. Five elements count
   const fiveElements = countFiveElements(fourPillars);
 
-  // 8. 基础信息
+  // 8. Basic info
   const lunar = solarTime.getLunarDay();
 
   return {
-    solar: `${year}年${month}月${day}日 ${hour}:${minute.toString().padStart(2, '0')}`,
+    solar: `${year}-${month}-${day} ${hour}:${minute.toString().padStart(2, '0')}`,
     lunar: lunar.toString(),
     bazi: baziStr,
     zodiac: lunar.getYearSixtyCycle().getEarthBranch().getZodiac().getName(),
@@ -622,13 +622,13 @@ const deepseek = createDeepSeek({
 });
 
 const analyzeBazi = tool({
-  description: '根据出生日期时间分析八字命理，返回完整的八字排盘数据',
+  description: 'Analyze Bazi (Four Pillars of Destiny) based on birth date and time, returns complete chart data',
   parameters: z.object({
-    year: z.number().describe('出生年份，如 1990'),
-    month: z.number().min(1).max(12).describe('出生月份'),
-    day: z.number().min(1).max(31).describe('出生日期'),
-    hour: z.number().min(0).max(23).describe('出生时辰（24小时制）'),
-    gender: z.number().min(0).max(1).optional().describe('性别：0-女，1-男，默认1'),
+    year: z.number().describe('Birth year, e.g. 1990'),
+    month: z.number().min(1).max(12).describe('Birth month'),
+    day: z.number().min(1).max(31).describe('Birth day'),
+    hour: z.number().min(0).max(23).describe('Birth hour (24-hour format)'),
+    gender: z.number().min(0).max(1).optional().describe('Gender: 0-female, 1-male, default 1'),
   }),
   execute: async (input) => {
     try {
@@ -640,21 +640,21 @@ const analyzeBazi = tool({
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '八字计算失败',
+        error: error instanceof Error ? error.message : 'Bazi calculation failed',
       };
     }
   },
 });
 
 const generateMascot = tool({
-  description: '根据吉祥物描述生成 3D 模型',
+  description: 'Generate 3D mascot model based on description',
   parameters: z.object({
-    prompt: z.string().describe('吉祥物的详细描述，包括形态、颜色、姿态、配饰等'),
-    style: z.string().optional().describe('风格偏好，如可爱、威严、Q版'),
+    prompt: z.string().describe('Detailed mascot description including form, color, pose, accessories'),
+    style: z.string().optional().describe('Style preference, e.g. cute, majestic, chibi'),
   }),
   execute: async ({ prompt, style }) => {
     try {
-      const fullPrompt = style ? `${prompt}，${style}风格` : prompt;
+      const fullPrompt = style ? `${prompt}, ${style} style` : prompt;
       const taskId = await tripoClient.createTask(fullPrompt);
       const result = await tripoClient.waitForCompletion(taskId, {
         timeout: 120_000,
@@ -668,37 +668,37 @@ const generateMascot = tool({
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '3D 模型生成失败',
+        error: error instanceof Error ? error.message : '3D model generation failed',
       };
     }
   },
 });
 
-const systemPrompt = `你是一位精通八字命理的吉祥物设计师。
+const systemPrompt = `You are an expert Bazi fortune teller and mascot designer.
 
-## 工作流程
-1. 用户提供出生日期时，调用 analyzeBazi 分析八字
-2. 根据八字分析结果，设计一个契合用户命理的吉祥物
-3. 调用 generateMascot 生成 3D 模型
-4. 向用户介绍吉祥物的寓意和命理关联
+## Workflow
+1. When user provides birth date, call analyzeBazi to analyze their Bazi chart
+2. Based on the Bazi analysis, design a mascot that aligns with their destiny
+3. Call generateMascot to create a 3D model
+4. Explain the mascot's meaning and its connection to their fortune
 
-## 八字分析指南
-分析八字时，请根据以下原则判断喜用神：
-1. 观察日主五行在四柱中的强弱（得令、得地、得生、得助）
-2. 身强者喜克泄耗（官杀、食伤、财星）
-3. 身弱者喜生扶（印星、比劫）
-4. 结合五行统计，找出缺失或过旺的五行
-5. 根据喜用神推荐对应的吉祥物元素
+## Bazi Analysis Guidelines
+When analyzing Bazi, determine favorable elements based on:
+1. Observe Day Master's strength in the four pillars (seasonal timing, rooting, support)
+2. Strong Day Master favors: controlling/draining elements (Officer, Output, Wealth)
+3. Weak Day Master favors: supporting elements (Resource, Companion)
+4. Check five elements distribution for deficiency or excess
+5. Recommend mascot elements based on favorable elements
 
-## 吉祥物设计原则
-- 描述要具体（形态、颜色、姿态、配饰）
-- 结合五行喜用神选择合适的元素：
-  - 水：玄武、龟、鱼类，黑色/蓝色
-  - 木：青龙、麒麟，青色/绿色
-  - 火：朱雀、凤凰，红色/橙色
-  - 金：白虎、貔貅，白色/金色
-  - 土：黄龙、瑞兽，黄色/褐色
-- 风格偏向精致小巧，适合作为摆件`;
+## Mascot Design Principles
+- Be specific about form, color, pose, and accessories
+- Choose elements based on favorable five elements:
+  - Water: Black Tortoise, turtles, fish - black/blue colors
+  - Wood: Azure Dragon, Qilin - green/cyan colors
+  - Fire: Vermillion Bird, Phoenix - red/orange colors
+  - Metal: White Tiger, Pixiu - white/gold colors
+  - Earth: Yellow Dragon, auspicious beasts - yellow/brown colors
+- Style should be refined and compact, suitable as a desk ornament`;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
@@ -761,7 +761,7 @@ curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
-      {"role": "user", "content": "我是1998年7月31日下午2点出生的男生"}
+      {"role": "user", "content": "I was born on July 31, 1998 at 2pm, male"}
     ]
   }'
 ```
