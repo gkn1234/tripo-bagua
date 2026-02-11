@@ -2,10 +2,10 @@
 'use client'
 
 import type { UIMessage } from 'ai'
+import type { BaziResult } from '@/lib/bazi/types'
 import { Copy, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { BaziResult } from '@/lib/bazi/types'
 import { BaguaCard } from './bagua-card'
 import { ModelPreview } from './model-preview'
 import { ReasoningBlock } from './reasoning-block'
@@ -47,7 +47,8 @@ export function ChatMessage({ message, isStreaming, onRegenerate }: ChatMessageP
       >
         {!isUser && message.parts.map((part, index) => {
           // Text parts are rendered separately below the parts loop
-          if (part.type === 'text') return null
+          if (part.type === 'text')
+            return null
 
           if (part.type === 'reasoning') {
             return (

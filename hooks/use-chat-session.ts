@@ -1,12 +1,12 @@
 // hooks/use-chat-session.ts
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
 import type { UIMessage } from 'ai'
-import { DefaultChatTransport } from 'ai'
-import { useChat } from '@ai-sdk/react'
-import { useChatStore } from '@/stores/chat-store'
 import type { Session } from '@/lib/persistence/chat-db'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useChatStore } from '@/stores/chat-store'
 
 function createSession(title = '新对话'): Session {
   const now = Date.now()
@@ -38,7 +38,8 @@ export function useChatSession() {
   // Debounce save messages to IndexedDB
   useEffect(() => {
     const session = sessionRef.current
-    if (!session || chat.messages.length === 0) return
+    if (!session || chat.messages.length === 0)
+      return
     clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
       const { saveSession } = await import('@/lib/persistence/chat-db')
@@ -62,7 +63,8 @@ export function useChatSession() {
         setInitialMessages(msgs)
         setCurrentSession(latest)
         setCurrentSessionId(latest.id)
-      } else {
+      }
+      else {
         const session = createSession()
         setCurrentSession(session)
         setCurrentSessionId(session.id)
@@ -75,7 +77,8 @@ export function useChatSession() {
     const { getSessionMessages, listSessions } = await import('@/lib/persistence/chat-db')
     const sessions = await listSessions()
     const session = sessions.find(s => s.id === sessionId)
-    if (!session) return
+    if (!session)
+      return
     const msgs = await getSessionMessages(sessionId)
     setInitialMessages(msgs)
     setCurrentSession(session)

@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import type { TripoTask } from '@/lib/tripo'
 import { Box, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/stores/chat-store'
-import type { TripoTask } from '@/lib/tripo'
 
 interface ModelPreviewProps {
   taskId: string
@@ -17,12 +17,14 @@ export function ModelPreview({ taskId }: ModelPreviewProps) {
 
   useEffect(() => {
     let cancelled = false
+    let interval: ReturnType<typeof setInterval>
     setPendingTaskId(taskId)
 
     const poll = async () => {
       try {
         const res = await fetch(`/api/tripo/task/${taskId}`)
-        if (cancelled) return
+        if (cancelled)
+          return
         if (!res.ok) {
           setPendingTaskId(null)
           clearInterval(interval)
@@ -34,20 +36,24 @@ export function ModelPreview({ taskId }: ModelPreviewProps) {
         if (data.status === 'success') {
           setPendingTaskId(null)
           clearInterval(interval)
-          if (data.output?.model) setModelUrl(data.output.model)
+          if (data.output?.model)
+            setModelUrl(data.output.model)
         }
         if (data.status === 'failed') {
           setPendingTaskId(null)
           clearInterval(interval)
         }
-      } catch {
-        if (!cancelled) setPendingTaskId(null)
+      }
+      catch {
+        if (!cancelled)
+          setPendingTaskId(null)
       }
     }
 
     poll() // immediate first poll
-    const interval = setInterval(() => {
-      if (!cancelled) poll()
+    interval = setInterval(() => {
+      if (!cancelled)
+        poll()
     }, 3000)
 
     return () => {
@@ -105,7 +111,10 @@ export function ModelPreview({ taskId }: ModelPreviewProps) {
       <div className="flex items-center gap-2">
         <Loader2 className="size-4 animate-spin text-primary" />
         <span className="text-sm">正在生成 3D 模型...</span>
-        <span className="ml-auto text-xs text-muted-foreground">{progress}%</span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {progress}
+          %
+        </span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary/20">
         <div

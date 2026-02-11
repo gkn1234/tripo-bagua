@@ -88,7 +88,8 @@ export async function POST(req: Request) {
         const fullPrompt = style ? `${prompt}, ${style} style` : prompt
         const taskId = await tripoClient.createTask(fullPrompt)
         return { success: true, taskId, status: 'pending' }
-      } catch (error) {
+      }
+      catch (error) {
         return {
           success: false,
           error: error instanceof Error ? error.message : '3D model generation failed',
