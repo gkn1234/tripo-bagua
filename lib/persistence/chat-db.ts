@@ -1,5 +1,5 @@
 // lib/persistence/chat-db.ts
-import type { Message } from '@/hooks/use-mock-chat'
+import type { UIMessage } from 'ai'
 import { openDB } from 'idb'
 import type { DBSchema, IDBPDatabase } from 'idb'
 
@@ -12,7 +12,7 @@ export interface Session {
 
 interface SessionMessages {
   sessionId: string
-  messages: Message[]
+  messages: UIMessage[]
 }
 
 interface ChatDB extends DBSchema {
@@ -51,13 +51,13 @@ export async function listSessions(): Promise<Session[]> {
   return all.reverse() // newest first
 }
 
-export async function getSessionMessages(sessionId: string): Promise<Message[]> {
+export async function getSessionMessages(sessionId: string): Promise<UIMessage[]> {
   const db = await getDB()
   const record = await db.get('messages', sessionId)
   return record?.messages ?? []
 }
 
-export async function saveSession(session: Session, messages: Message[]): Promise<void> {
+export async function saveSession(session: Session, messages: UIMessage[]): Promise<void> {
   const db = await getDB()
   const tx = db.transaction(['sessions', 'messages'], 'readwrite')
   await tx.objectStore('sessions').put(session)
