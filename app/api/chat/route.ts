@@ -38,36 +38,6 @@ const analyzeBazi = tool({
   },
 })
 
-const generateMascot = tool({
-  description: 'Generate 3D mascot model based on description',
-  inputSchema: z.object({
-    prompt: z.string().describe('Detailed mascot description including form, color, pose, accessories'),
-    style: z.string().optional().describe('Style preference, e.g. cute, majestic, chibi'),
-  }),
-  execute: async ({ prompt, style }) => {
-    try {
-      const fullPrompt = style ? `${prompt}, ${style} style` : prompt
-      const taskId = await tripoClient.createTask(fullPrompt)
-      const result = await tripoClient.waitForCompletion(taskId, {
-        timeout: 120_000,
-        interval: 3_000,
-      })
-      return {
-        success: true,
-        modelUrl: result.output?.model,
-        renderedImage: result.output?.rendered_image,
-        taskId,
-      }
-    }
-    catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '3D model generation failed',
-      }
-    }
-  },
-})
-
 const systemPrompt = `You are an expert Bazi fortune teller and mascot designer.
 
 ## Workflow
@@ -92,10 +62,40 @@ When analyzing Bazi, determine favorable elements based on:
   - Fire: Vermillion Bird, Phoenix - red/orange colors
   - Metal: White Tiger, Pixiu - white/gold colors
   - Earth: Yellow Dragon, auspicious beasts - yellow/brown colors
-- Style should be refined and compact, suitable as a desk ornament`
+- Style should be refined and compact, suitable as a desk ornament
+
+## 3D 模型生成
+调用 generateMascot 后会返回 { taskId, status: 'pending' }，
+表示 3D 模型已提交异步生成，前端会自动轮询进度并展示结果。
+在模型生成期间不要再次调用 generateMascot，告诉用户等待当前模型完成。
+继续向用户解释吉祥物的设计理念和寓意。`
 
 export async function POST(req: Request) {
-  const { messages } = await req.json()
+  const { messages, pendingTaskId } = await req.json()
+
+  const generateMascot = tool({
+    description: 'Generate 3D mascot model based on description. Returns a taskId for async generation.',
+    inputSchema: z.object({
+      prompt: z.string().describe('Detailed mascot description including form, color, pose, accessories'),
+      style: z.string().optional().describe('Style preference, e.g. cute, majestic, chibi'),
+    }),
+    execute: async ({ prompt, style }) => {
+      // Hard guard: reject if generation already in progress
+      if (pendingTaskId) {
+        return { success: false, error: '已有模型在生成中，请等待完成' }
+      }
+      try {
+        const fullPrompt = style ? `${prompt}, ${style} style` : prompt
+        const taskId = await tripoClient.createTask(fullPrompt)
+        return { success: true, taskId, status: 'pending' }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : '3D model generation failed',
+        }
+      }
+    },
+  })
 
   const result = streamText({
     model: deepseek('deepseek-chat'),
