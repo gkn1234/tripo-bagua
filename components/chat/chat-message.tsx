@@ -5,6 +5,7 @@ import { Copy, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { BaguaCard } from './bagua-card'
+import { ModelPreview } from './model-preview'
 import { ReasoningBlock } from './reasoning-block'
 import { ToolStatus } from './tool-status'
 
@@ -56,6 +57,16 @@ export function ChatMessage({ message, isStreaming, onRegenerate }: ChatMessageP
                 }
               }
               catch { /* fall through to ToolStatus */ }
+            }
+            // Render ModelPreview for generateMascot
+            if (part.name === 'generateMascot') {
+              return (
+                <ModelPreview
+                  key={`tool-${index}`}
+                  status={part.status}
+                  result={part.result}
+                />
+              )
             }
             return (
               <ToolStatus
