@@ -4,6 +4,7 @@ import type { Message } from '@/hooks/use-mock-chat'
 import { Copy, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { BaguaCard } from './bagua-card'
 import { ReasoningBlock } from './reasoning-block'
 import { ToolStatus } from './tool-status'
 
@@ -46,6 +47,16 @@ export function ChatMessage({ message, isStreaming, onRegenerate }: ChatMessageP
             )
           }
           if (part.type === 'tool-call' && part.name && part.status) {
+            // Render BaguaCard for completed analyzeBazi
+            if (part.name === 'analyzeBazi' && part.status === 'complete' && part.result) {
+              try {
+                const parsed = JSON.parse(part.result)
+                if (parsed.success && parsed.data) {
+                  return <BaguaCard key={`tool-${index}`} data={parsed.data} />
+                }
+              }
+              catch { /* fall through to ToolStatus */ }
+            }
             return (
               <ToolStatus
                 key={`tool-${index}`}
