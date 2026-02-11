@@ -79,11 +79,12 @@ export function ChatMessage({ message, isStreaming, onRegenerate }: ChatMessageP
 
             // ModelPreview for generateMascot
             if (toolName === 'generateMascot') {
+              const taskId = output?.taskId as string | undefined
+              if (!taskId) return null
               return (
                 <ModelPreview
                   key={`tool-${index}`}
-                  toolState={state}
-                  output={output}
+                  taskId={taskId}
                 />
               )
             }
