@@ -7,10 +7,12 @@ interface ChatState {
   modelUrl: string | null
   currentSessionId: string | null
   sidebarOpen: boolean
+  pendingTaskId: string | null
   setPhase: (phase: Phase) => void
   setModelUrl: (url: string) => void
   setCurrentSessionId: (id: string | null) => void
   setSidebarOpen: (open: boolean) => void
+  setPendingTaskId: (id: string | null) => void
   toggleSidebar: () => void
   reset: () => void
 }
@@ -20,10 +22,12 @@ export const useChatStore = create<ChatState>(set => ({
   modelUrl: null,
   currentSessionId: null,
   sidebarOpen: true,
+  pendingTaskId: null,
   setPhase: phase => set({ phase }),
   setModelUrl: url => set({ modelUrl: url, phase: 'split' }),
   setCurrentSessionId: id => set({ currentSessionId: id }),
   setSidebarOpen: open => set({ sidebarOpen: open }),
+  setPendingTaskId: id => set({ pendingTaskId: id }),
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
-  reset: () => set({ phase: 'chat', modelUrl: null }),
+  reset: () => set({ phase: 'chat', modelUrl: null, pendingTaskId: null }),
 }))
