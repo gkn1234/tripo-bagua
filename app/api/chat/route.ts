@@ -1,103 +1,106 @@
 // app/api/chat/route.ts
-import type { NextRequest } from 'next/server'
+import { createDeepSeek } from '@ai-sdk/deepseek';
+import { streamText, tool, convertToModelMessages, stepCountIs } from 'ai';
+import { z } from 'zod';
+import { calculateBazi } from '@/lib/bazi';
+import { tripoClient } from '@/lib/tripo';
 
-const MOCK_RESPONSES = [
-  {
-    thinking: '让我分析一下您的出生日期...\n\n根据八字理论，我需要将公历日期转换为农历，然后计算天干地支...',
-    text: '根据您提供的信息，我来为您分析八字：\n\n**您的八字排盘**\n- 年柱：甲子\n- 月柱：丙寅\n- 日柱：戊辰\n- 时柱：壬午\n\n**五行分析**\n您的八字中木、火较旺，土为日主，整体格局偏向「食神生财」。\n\n您希望我为您生成一个什么样的吉祥物呢？可以告诉我您的偏好，比如：\n- 动物类（龙、凤、麒麟等）\n- 植物类（莲花、竹子等）\n- 抽象类（祥云、如意等）',
+const deepseek = createDeepSeek({
+  apiKey: process.env.DEEPSEEK_API_KEY!,
+});
+
+const analyzeBazi = tool({
+  description: 'Analyze Bazi (Four Pillars of Destiny) based on birth date and time, returns complete chart data',
+  inputSchema: z.object({
+    year: z.number().describe('Birth year, e.g. 1990'),
+    month: z.number().min(1).max(12).describe('Birth month'),
+    day: z.number().min(1).max(31).describe('Birth day'),
+    hour: z.number().min(0).max(23).describe('Birth hour (24-hour format)'),
+    gender: z.number().min(0).max(1).optional().describe('Gender: 0-female, 1-male, default 1'),
+  }),
+  execute: async ({ year, month, day, hour, gender }) => {
+    try {
+      const result = calculateBazi({
+        year,
+        month,
+        day,
+        hour,
+        gender: (gender ?? 1) as 0 | 1,
+      });
+      return { success: true, data: result };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Bazi calculation failed',
+      };
+    }
   },
-  {
-    thinking: '用户想要一个龙形吉祥物，结合他的八字特点，我来设计一个适合的造型...',
-    text: '好的！基于您的八字特点，我为您设计了一个**祥龙献瑞**吉祥物：\n\n🐉 **设计理念**\n- 龙身环绕祥云，象征腾飞\n- 龙爪握宝珠，寓意财运亨通\n- 底座为莲花，取「和谐」之意\n\n正在为您生成 3D 模型，请稍候...',
-    toolCall: {
-      name: 'generate_3d_model',
-      status: 'calling',
-    },
+});
+
+const generateMascot = tool({
+  description: 'Generate 3D mascot model based on description',
+  inputSchema: z.object({
+    prompt: z.string().describe('Detailed mascot description including form, color, pose, accessories'),
+    style: z.string().optional().describe('Style preference, e.g. cute, majestic, chibi'),
+  }),
+  execute: async ({ prompt, style }) => {
+    try {
+      const fullPrompt = style ? `${prompt}, ${style} style` : prompt;
+      const taskId = await tripoClient.createTask(fullPrompt);
+      const result = await tripoClient.waitForCompletion(taskId, {
+        timeout: 120_000,
+        interval: 3_000,
+      });
+      return {
+        success: true,
+        modelUrl: result.output?.model,
+        taskId,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '3D model generation failed',
+      };
+    }
   },
-  {
-    text: '✨ **3D 模型生成完成！**\n\n您的专属吉祥物已经准备好了，可以在右侧查看和旋转模型。\n\n如果满意，可以点击「下单打印」将它变成实物！',
-    toolCall: {
-      name: 'generate_3d_model',
-      status: 'complete',
-      result: 'https://example.com/model.glb',
-    },
-    modelReady: true,
-  },
-]
+});
 
-export async function POST(req: NextRequest) {
-  const { messages } = await req.json()
+const systemPrompt = `You are an expert Bazi fortune teller and mascot designer.
 
-  // 根据用户消息数量选择响应（每2条消息=1轮对话）
-  const userMessageCount = messages.filter((m: { role: string }) => m.role === 'user').length
-  const responseIdx = Math.min(userMessageCount - 1, MOCK_RESPONSES.length - 1)
-  const mockResponse = MOCK_RESPONSES[Math.max(0, responseIdx)]
+## Workflow
+1. When user provides birth date, call analyzeBazi to analyze their Bazi chart
+2. Based on the Bazi analysis, design a mascot that aligns with their destiny
+3. Call generateMascot to create a 3D model
+4. Explain the mascot's meaning and its connection to their fortune
 
-  // 创建流式响应
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream({
-    async start(controller) {
-      // 发送思考过程
-      if (mockResponse.thinking) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: 'reasoning',
-          content: mockResponse.thinking,
-        })}\n\n`))
-        await delay(500)
-      }
+## Bazi Analysis Guidelines
+When analyzing Bazi, determine favorable elements based on:
+1. Observe Day Master's strength in the four pillars (seasonal timing, rooting, support)
+2. Strong Day Master favors: controlling/draining elements (Officer, Output, Wealth)
+3. Weak Day Master favors: supporting elements (Resource, Companion)
+4. Check five elements distribution for deficiency or excess
+5. Recommend mascot elements based on favorable elements
 
-      // 发送工具调用状态
-      if (mockResponse.toolCall?.status === 'calling') {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: 'tool-call',
-          name: mockResponse.toolCall.name,
-          status: 'calling',
-        })}\n\n`))
-        await delay(300)
-      }
+## Mascot Design Principles
+- Be specific about form, color, pose, and accessories
+- Choose elements based on favorable five elements:
+  - Water: Black Tortoise, turtles, fish - black/blue colors
+  - Wood: Azure Dragon, Qilin - green/cyan colors
+  - Fire: Vermillion Bird, Phoenix - red/orange colors
+  - Metal: White Tiger, Pixiu - white/gold colors
+  - Earth: Yellow Dragon, auspicious beasts - yellow/brown colors
+- Style should be refined and compact, suitable as a desk ornament`;
 
-      // 流式发送文本
-      const chars = mockResponse.text.split('')
-      for (const char of chars) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: 'text-delta',
-          content: char,
-        })}\n\n`))
-        await delay(20)
-      }
+export async function POST(req: Request) {
+  const { messages } = await req.json();
 
-      // 发送工具调用完成
-      if (mockResponse.toolCall?.status === 'complete') {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: 'tool-call',
-          name: mockResponse.toolCall.name,
-          status: 'complete',
-          result: mockResponse.toolCall.result,
-        })}\n\n`))
-      }
+  const result = streamText({
+    model: deepseek('deepseek-chat'),
+    system: systemPrompt,
+    messages: await convertToModelMessages(messages),
+    tools: { analyzeBazi, generateMascot },
+    stopWhen: stepCountIs(10),
+  });
 
-      // 发送模型就绪信号
-      if (mockResponse.modelReady) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          type: 'model-ready',
-          url: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-        })}\n\n`))
-      }
-
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-      controller.close()
-    },
-  })
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  })
-}
-
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return result.toUIMessageStreamResponse();
 }
