@@ -158,8 +158,13 @@ export function useMockChat() {
   }, [input, sendMessage])
 
   const reload = useCallback(() => {
-    // TODO: implement regenerate
-  }, [])
+    if (isLoading) return
+    const lastUserIndex = messages.findLastIndex(m => m.role === 'user')
+    if (lastUserIndex === -1) return
+    const lastUserContent = messages[lastUserIndex].content
+    setMessages(prev => prev.slice(0, lastUserIndex + 1))
+    setTimeout(() => sendMessage(lastUserContent), 0)
+  }, [isLoading, messages, sendMessage])
 
   return {
     messages,
