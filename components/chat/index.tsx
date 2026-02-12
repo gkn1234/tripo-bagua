@@ -68,6 +68,7 @@ export function Chat() {
           >
             <PromptInputTextarea
               placeholder="输入您的出生日期，开始八字分析..."
+              disabled={isLoading}
             />
             <PromptInputFooter>
               <div />

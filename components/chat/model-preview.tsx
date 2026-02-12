@@ -35,14 +35,19 @@ export function ModelPreview({ taskId }: ModelPreviewProps) {
           return
         }
         const data: TripoTask = await res.json()
+        console.warn('[ModelPreview] poll result:', { taskId, status: data.status, progress: data.progress, output: data.output })
         setTask(data)
 
         if (data.status === 'success') {
           clearInterval(interval)
+          const pendingId = useChatStore.getState().pendingTaskId
+          console.warn('[ModelPreview] success guard:', { pendingId, taskId, match: pendingId === taskId, pbr_model: data.output?.pbr_model })
           // Guard: only set modelUrl if this task is still the active one
           // (resetStore() clears pendingTaskId on session switch)
-          if (data.output?.pbr_model && useChatStore.getState().pendingTaskId === taskId) {
-            setModelUrl(proxyUrl(data.output.pbr_model))
+          if (data.output?.pbr_model && pendingId === taskId) {
+            const url = proxyUrl(data.output.pbr_model)
+            console.warn('[ModelPreview] calling setModelUrl:', url)
+            setModelUrl(url)
           }
           setPendingTaskId(null)
         }

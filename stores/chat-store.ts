@@ -24,10 +24,19 @@ export const useChatStore = create<ChatState>(set => ({
   sidebarOpen: true,
   pendingTaskId: null,
   setPhase: phase => set({ phase }),
-  setModelUrl: url => set({ modelUrl: url, phase: 'split' }),
+  setModelUrl: (url) => {
+    console.warn('[ChatStore] setModelUrl called:', url)
+    set({ modelUrl: url, phase: 'split' })
+  },
   setCurrentSessionId: id => set({ currentSessionId: id }),
   setSidebarOpen: open => set({ sidebarOpen: open }),
-  setPendingTaskId: id => set({ pendingTaskId: id }),
+  setPendingTaskId: (id) => {
+    console.warn('[ChatStore] setPendingTaskId:', id)
+    set({ pendingTaskId: id })
+  },
   toggleSidebar: () => set(state => ({ sidebarOpen: !state.sidebarOpen })),
-  reset: () => set({ phase: 'chat', modelUrl: null, pendingTaskId: null, sidebarOpen: true }),
+  reset: () => {
+    console.warn('[ChatStore] reset called')
+    set({ phase: 'chat', modelUrl: null, pendingTaskId: null, sidebarOpen: true })
+  },
 }))
