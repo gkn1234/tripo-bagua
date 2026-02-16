@@ -1,9 +1,9 @@
+import type { SourceKey } from './classics'
 // lib/bazi/analysis-agent.ts
 import type { AnalysisEntry, AnalysisNote, BaziResult } from './types'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { generateText, stepCountIs, tool } from 'ai'
 import { z } from 'zod'
-import type { SourceKey } from './classics'
 import { searchClassics } from './classics'
 
 const deepseek = createDeepSeek({

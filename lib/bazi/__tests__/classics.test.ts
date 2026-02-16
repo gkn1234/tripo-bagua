@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ClassicChunk } from '../classics'
 import { cosineSimilarity, searchClassics } from '../classics'
 
 describe('cosineSimilarity', () => {
