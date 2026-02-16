@@ -1,5 +1,9 @@
 // lib/bazi/classics.ts
 
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { embedText } from './embedding'
+
 export interface ClassicChunk {
   id: string            // 唯一 ID，如 "qiongtong-jia-yin"
   content: string       // 原文段落（含白话注释）
@@ -21,4 +25,53 @@ export function cosineSimilarity(a: number[], b: number[]): number {
     normB += b[i] * b[i]
   }
   return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+}
+
+export const SOURCE_MAP: Record<SourceKey, string> = {
+  qiongtong: '穷通宝鉴',
+  ziping: '子平真诠',
+  ditian: '滴天髓',
+  yuanhai: '渊海子平',
+  sanming: '三命通会',
+}
+
+let chunksCache: ClassicChunk[] | null = null
+
+export function loadChunks(): ClassicChunk[] {
+  if (chunksCache) return chunksCache
+  const filePath = resolve(process.cwd(), 'data/classics/chunks.json')
+  if (!existsSync(filePath)) return []
+  chunksCache = JSON.parse(readFileSync(filePath, 'utf-8'))
+  return chunksCache!
+}
+
+export interface SearchResult {
+  id: string
+  content: string
+  source: string
+  chapter: string
+  score: number
+}
+
+export async function searchClassics(
+  query: string,
+  source: SourceKey | 'all',
+  topK = 3,
+): Promise<SearchResult[]> {
+  const queryEmbedding = await embedText(query)
+  const chunks = loadChunks()
+  const candidates = source === 'all'
+    ? chunks
+    : chunks.filter(c => c.source === SOURCE_MAP[source])
+
+  return candidates
+    .map(c => ({
+      id: c.id,
+      content: c.content,
+      source: c.source,
+      chapter: c.chapter,
+      score: cosineSimilarity(queryEmbedding, c.embedding),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
 }
