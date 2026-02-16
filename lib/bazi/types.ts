@@ -81,3 +81,17 @@ export interface BaziResult {
   // Punishment/Clash/Combination relations
   relations: Record<string, unknown>
 }
+
+export interface AnalysisEntry {
+  question: string | null    // 触发问题（null = 首次综合分析）
+  content: string            // 分析结论（Markdown）
+  references: string[]       // 引用的经典出处
+  createdAt: number
+}
+
+export interface AnalysisNote {
+  sessionId: string
+  rawData: BaziResult
+  analyses: AnalysisEntry[]
+  updatedAt: number
+}
