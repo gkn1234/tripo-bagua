@@ -19,7 +19,7 @@ export default function Home() {
   const { currentSession, loadSession, newSession, ui: chatUI } = Chat()
 
   const isSplit = phase === 'split' && !!modelUrl
-  console.warn('[Home] render:', { phase, modelUrl: modelUrl?.slice(0, 60), isSplit })
+  console.warn('[Home] render:', { phase, modelUrl: modelUrl ? modelUrl.slice(0, 60) : null, isSplit })
 
   return (
     <main className="flex h-screen">

@@ -22,6 +22,24 @@ const transport = new DefaultChatTransport({
   }),
 })
 
+/** Remove incomplete tool-call parts (no output yet) to prevent MissingToolResultsError */
+function sanitizeMessages(messages: UIMessage[]): UIMessage[] {
+  return messages.reduce<UIMessage[]>((acc, msg) => {
+    if (msg.role !== 'assistant') {
+      acc.push(msg)
+      return acc
+    }
+    const cleanParts = msg.parts.filter((part) => {
+      if (!part.type.startsWith('tool-'))
+        return true
+      return 'state' in part && part.state === 'output-available'
+    })
+    if (cleanParts.length > 0)
+      acc.push({ ...msg, parts: cleanParts })
+    return acc
+  }, [])
+}
+
 export function useChatSession() {
   const [currentSession, setCurrentSession] = useState<Session | null>(null)
   const [initialMessages, setInitialMessages] = useState<UIMessage[]>([])
@@ -36,6 +54,10 @@ export function useChatSession() {
     messages: initialMessages,
     transport,
   })
+
+  // Keep a stable ref to chat.stop for use in callbacks
+  const chatStopRef = useRef(chat.stop)
+  chatStopRef.current = chat.stop
 
   // Debounce save messages to IndexedDB
   useEffect(() => {
@@ -90,7 +112,7 @@ export function useChatSession() {
       const { getLatestSession, getSessionMessages, getAnalysisNote } = await import('@/lib/persistence/chat-db')
       const latest = await getLatestSession()
       if (latest) {
-        const msgs = await getSessionMessages(latest.id)
+        const msgs = sanitizeMessages(await getSessionMessages(latest.id))
         setInitialMessages(msgs)
         setCurrentSession(latest)
         setCurrentSessionId(latest.id)
@@ -109,14 +131,16 @@ export function useChatSession() {
   }, [setCurrentSessionId])
 
   const loadSession = useCallback(async (sessionId: string) => {
-    // Reset store first to clear modelUrl/phase before new messages render
+    // Stop active streaming and cancel pending save
+    chatStopRef.current()
+    clearTimeout(saveTimerRef.current)
     resetStore()
     const { getSessionMessages, listSessions, saveSession, getAnalysisNote } = await import('@/lib/persistence/chat-db')
     const sessions = await listSessions()
     const session = sessions.find(s => s.id === sessionId)
     if (!session)
       return
-    const msgs = await getSessionMessages(sessionId)
+    const msgs = sanitizeMessages(await getSessionMessages(sessionId))
     const updated = { ...session, updatedAt: Date.now() }
     await saveSession(updated, msgs)
     setCurrentSessionId(updated.id)
@@ -127,6 +151,8 @@ export function useChatSession() {
   }, [setCurrentSessionId, resetStore])
 
   const newSession = useCallback(async () => {
+    chatStopRef.current()
+    clearTimeout(saveTimerRef.current)
     resetStore()
     const session = createSession()
     setCurrentSessionId(session.id)

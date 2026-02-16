@@ -68,9 +68,9 @@ desktop collectible, smooth LOD transitions"
 
 ## 工具使用
 
-analyzeBazi — 必须在用户确认生辰信息后才能调用。收到生辰信息后先复述、等确认、收到确认后才排盘。
+analyzeBazi — 排盘工具,只做纯计算,瞬间返回四柱数据。必须在用户确认生辰信息后才能调用。排盘完成后必须紧接着调用 deepAnalysis 做综合分析。
 
-deepAnalysis — 当已有分析结论不足以回答用户问题时调用,传入具体问题,分析 Agent 会做补充分析。
+deepAnalysis — 分析工具。排盘后必须立即调用(不传 question)做综合分析;用户追问时传入具体问题做补充分析。
 
 presentOptions — 每次回复末尾如果存在分支选择,就调用此工具提供选项按钮。不要用纯文字罗列选项来替代它。
 
@@ -106,8 +106,11 @@ function buildAnalysisContext(note: AnalysisNote | null): string {
 export async function POST(req: Request) {
   const { messages, pendingTaskId, analysisNote: existingNote } = await req.json()
 
+  // Mutable note shared across tool calls within this request
+  let currentNote: AnalysisNote | null = existingNote ?? null
+
   const analyzeBazi = tool({
-    description: '根据出生日期时间分析八字命盘,返回完整的四柱数据和专业分析',
+    description: '根据出生日期时间排八字命盘,返回四柱数据(纯计算,不含分析)',
     inputSchema: z.object({
       year: z.number().describe('出生年份,如 1990'),
       month: z.number().min(1).max(12).describe('出生月份'),
@@ -119,22 +122,14 @@ export async function POST(req: Request) {
       try {
         const result = calculateBazi({ year, month, day, hour, gender: (gender ?? 1) as 0 | 1 })
 
-        const { fiveElements, ...dataForAnalysis } = result
-
-        const entry = await runAnalysis({
-          rawData: dataForAnalysis,
-          previousNote: existingNote ?? null,
-          question: null,
-        })
-
-        const updatedNote: AnalysisNote = {
+        currentNote = {
           sessionId: '',
           rawData: result,
-          analyses: [...(existingNote?.analyses ?? []), entry],
+          analyses: currentNote?.analyses ?? [],
           updatedAt: Date.now(),
         }
 
-        return { success: true, data: result, analysisNote: updatedNote }
+        return { success: true, data: result, analysisNote: currentNote }
       }
       catch (error) {
         return { success: false, error: error instanceof Error ? error.message : '八字计算失败' }
@@ -143,34 +138,34 @@ export async function POST(req: Request) {
   })
 
   const deepAnalysis = tool({
-    description: '对已有命盘做补充深入分析,当 analysisNote 中的现有分析不足以回答用户问题时调用',
+    description: '对命盘做专业分析。排盘后必须立即调用(不传 question)做综合分析;用户追问时传入具体问题做补充分析。',
     inputSchema: z.object({
-      question: z.string().describe('需要深入分析的具体问题'),
+      question: z.string().optional().describe('需要分析的具体问题,首次综合分析时不传'),
     }),
     execute: async ({ question }) => {
-      if (!existingNote?.rawData) {
+      if (!currentNote?.rawData) {
         return { success: false, error: '尚未排盘，请先调用 analyzeBazi' }
       }
 
       try {
-        const { fiveElements, ...dataForAnalysis } = existingNote.rawData
+        const { fiveElements, ...dataForAnalysis } = currentNote.rawData
 
         const entry = await runAnalysis({
           rawData: dataForAnalysis,
-          previousNote: existingNote,
-          question,
+          previousNote: currentNote,
+          question: question ?? null,
         })
 
-        const updatedNote: AnalysisNote = {
-          ...existingNote,
-          analyses: [...existingNote.analyses, entry],
+        currentNote = {
+          ...currentNote,
+          analyses: [...currentNote.analyses, entry],
           updatedAt: Date.now(),
         }
 
-        return { success: true, analysisNote: updatedNote }
+        return { success: true, analysisNote: currentNote }
       }
       catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : '补充分析失败' }
+        return { success: false, error: error instanceof Error ? error.message : '分析失败' }
       }
     },
   })
