@@ -44,6 +44,3 @@ secret
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Classics embedding data (generated, large)
-data/classics/chunks.json
