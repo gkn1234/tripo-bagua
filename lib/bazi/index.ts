@@ -41,9 +41,13 @@ export function calculateBazi(input: BaziInput): BaziResult {
 
   // 4. Spirit Sha (gods)
   const baziStr = eightChar.toString()
-  let gods: string[][] = []
+  let gods: Record<'year' | 'month' | 'day' | 'hour', string[]> = { year: [], month: [], day: [], hour: [] }
   try {
-    gods = getShen(baziStr, gender)
+    const rawGods = getShen(baziStr, gender)
+    const keys = ['year', 'month', 'day', 'hour'] as const
+    for (let i = 0; i < rawGods.length && i < 4; i++) {
+      gods[keys[i]] = rawGods[i] ?? []
+    }
   }
   catch {
     // cantian-tymext may throw, ignore

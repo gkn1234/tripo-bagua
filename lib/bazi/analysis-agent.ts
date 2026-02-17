@@ -10,22 +10,30 @@ const deepseek = createDeepSeek({
   apiKey: process.env.DEEPSEEK_API_KEY!,
 })
 
-const ANALYSIS_SYSTEM_PROMPT = `你是一位命理分析引擎。你的任务是基于排盘数据,产出专业的八字命理分析。
+function buildSystemPrompt(): string {
+  const now = new Date()
+  const timeStr = `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`
+  return `你是一位命理分析引擎。你的任务是基于排盘数据,产出专业的八字命理分析。
+
+当前时间: ${timeStr}
 
 规则:
 - 所有结论必须有命盘数据作为依据,指出具体是哪柱、哪个十神、哪组关系
+- 命理分析有多个维度——格局、调候、纳音、神煞、刑冲合会等——它们各有所长,不分主次,根据盘面特征综合运用。排盘数据中的 naYin、gods、relations 字段均为有效分析素材,不要忽略
 - 不需要考虑表达风格,不需要说人话,专注于分析的准确性和完整性
 - 如果对某个判断不确定,明确标注不确定程度,而非给出模糊的万金油结论
 - 分析中遇到特殊格局(从格、化格、专旺格等)时,须特别标注
 - 输出格式为 Markdown
 
 工具:
-- queryClassics：查阅穷通宝鉴、子平真诠、滴天髓、渊海子平、三命通会等经典。需要查阅调候用法、格局论述、纳音论述、神煞论述、干支关系时主动调用。引用经典原文时标注出处（如《穷通宝鉴·甲木寅月》、《三命通会·论纳音取象》）。`
+- queryClassics：你的书架上有《穷通宝鉴》（调候用神逐月论述）、《子平真诠》（格局法体系）、《滴天髓》（干支生克理论+实战命例）、《渊海子平》（神煞/格局/赋论）、《三命通会》（纳音/神煞/日时断诀）。分析过程中可随时查阅。引用经典原文时标注出处（如《穷通宝鉴·甲木寅月》、《三命通会·论纳音取象》）。`
+}
 
 interface AnalyzeParams {
   rawData: Omit<BaziResult, 'fiveElements'>
   previousNote: AnalysisNote | null
   question: string | null
+  gender: 0 | 1
 }
 
 const queryClassicsTool = tool({
@@ -48,15 +56,15 @@ const queryClassicsTool = tool({
   },
 })
 
-export async function runAnalysis({ rawData, previousNote, question }: AnalyzeParams): Promise<AnalysisEntry> {
-  const userContent = buildUserPrompt({ rawData, previousNote, question })
+export async function runAnalysis({ rawData, previousNote, question, gender }: AnalyzeParams): Promise<AnalysisEntry> {
+  const userContent = buildUserPrompt({ rawData, previousNote, question, gender })
 
   const { text } = await generateText({
     model: deepseek('deepseek-chat'),
-    system: ANALYSIS_SYSTEM_PROMPT,
+    system: buildSystemPrompt(),
     prompt: userContent,
     tools: { queryClassics: queryClassicsTool },
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(20),
   })
 
   return {
@@ -67,15 +75,15 @@ export async function runAnalysis({ rawData, previousNote, question }: AnalyzePa
   }
 }
 
-export async function* runAnalysisStream({ rawData, previousNote, question }: AnalyzeParams): AsyncGenerator<AnalysisEvent> {
-  const userContent = buildUserPrompt({ rawData, previousNote, question })
+export async function* runAnalysisStream({ rawData, previousNote, question, gender }: AnalyzeParams): AsyncGenerator<AnalysisEvent> {
+  const userContent = buildUserPrompt({ rawData, previousNote, question, gender })
 
   const result = streamText({
     model: deepseek('deepseek-chat'),
-    system: ANALYSIS_SYSTEM_PROMPT,
+    system: buildSystemPrompt(),
     prompt: userContent,
     tools: { queryClassics: queryClassicsTool },
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(20),
   })
 
   let fullText = ''
@@ -118,8 +126,17 @@ export async function* runAnalysisStream({ rawData, previousNote, question }: An
   }
 }
 
-function buildUserPrompt({ rawData, previousNote, question }: AnalyzeParams): string {
+function buildUserPrompt({ rawData, previousNote, question, gender }: AnalyzeParams): string {
   const parts: string[] = []
+
+  // 命主基本信息
+  const currentYear = new Date().getFullYear()
+  const birthYear = Number.parseInt(rawData.solar.split('-')[0], 10)
+  const age = currentYear - birthYear
+  parts.push(`## 命主信息\n`)
+  parts.push(`- 性别: ${gender === 1 ? '男' : '女'}`)
+  parts.push(`- 当前年份: ${currentYear} 年（虚岁约 ${age + 1} 岁）`)
+  parts.push('')
 
   parts.push('## 排盘数据\n')
   parts.push('```json')
@@ -147,7 +164,7 @@ function buildUserPrompt({ rawData, previousNote, question }: AnalyzeParams): st
   }
   else {
     parts.push('## 本次分析任务\n')
-    parts.push('请对该命盘做全面综合分析。涵盖日主强弱、格局特征、核心矛盾、大运走势等关键维度。')
+    parts.push('请对该命盘做全面综合分析。根据盘面特征自行确定分析重点。')
   }
 
   return parts.join('\n')
@@ -158,5 +175,5 @@ function extractReferences(text: string): string[] {
   return matches ? [...new Set(matches)] : []
 }
 
-export { ANALYSIS_SYSTEM_PROMPT, buildUserPrompt, extractReferences }
+export { buildSystemPrompt, buildUserPrompt, extractReferences }
 export type { AnalyzeParams }

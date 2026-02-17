@@ -30,34 +30,34 @@ export function ModelPreview({ taskId }: ModelPreviewProps) {
         if (cancelled)
           return
         if (!res.ok) {
-          setPendingTaskId(null)
+          if (useChatStore.getState().pendingTaskId === taskId)
+            setPendingTaskId(null)
           clearInterval(interval)
           return
         }
         const data: TripoTask = await res.json()
-        console.warn('[ModelPreview] poll result:', { taskId, status: data.status, progress: data.progress, output: data.output })
         setTask(data)
 
         if (data.status === 'success') {
           clearInterval(interval)
           const pendingId = useChatStore.getState().pendingTaskId
-          console.warn('[ModelPreview] success guard:', { pendingId, taskId, match: pendingId === taskId, pbr_model: data.output?.pbr_model })
           // Guard: only set modelUrl if this task is still the active one
           // (resetStore() clears pendingTaskId on session switch)
           if (data.output?.pbr_model && pendingId === taskId) {
             const url = proxyUrl(data.output.pbr_model)
-            console.warn('[ModelPreview] calling setModelUrl:', url)
             setModelUrl(url)
           }
-          setPendingTaskId(null)
+          if (pendingId === taskId)
+            setPendingTaskId(null)
         }
         if (data.status === 'failed') {
-          setPendingTaskId(null)
+          if (useChatStore.getState().pendingTaskId === taskId)
+            setPendingTaskId(null)
           clearInterval(interval)
         }
       }
       catch {
-        if (!cancelled)
+        if (!cancelled && useChatStore.getState().pendingTaskId === taskId)
           setPendingTaskId(null)
       }
     }
@@ -71,7 +71,8 @@ export function ModelPreview({ taskId }: ModelPreviewProps) {
     return () => {
       cancelled = true
       clearInterval(interval)
-      setPendingTaskId(null)
+      if (useChatStore.getState().pendingTaskId === taskId)
+        setPendingTaskId(null)
     }
   }, [taskId, setModelUrl, setPendingTaskId])
 

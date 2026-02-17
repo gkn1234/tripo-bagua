@@ -12,6 +12,16 @@ interface AnalysisCardProps {
   progress: AnalysisProgress
   state: string
   preliminary?: boolean
+  question?: string
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  ziping: '子平真诠',
+  ditian: '滴天髓',
+  qiongtong: '穷通宝鉴',
+  yuanhai: '渊海子平',
+  sanming: '三命通会',
+  all: '全部经典',
 }
 
 function ClassicSubCard({ query, source, results, isLoading }: {
@@ -29,7 +39,7 @@ function ClassicSubCard({ query, source, results, isLoading }: {
           ? <LoaderIcon className="size-3.5 animate-spin text-muted-foreground" />
           : <BookOpenIcon className="size-3.5 text-muted-foreground" />}
         <span className="flex-1 text-left">
-          {isLoading ? `正在查阅《${source}》...` : `查阅《${source}》`}
+          {isLoading ? `正在查阅《${SOURCE_LABELS[source] ?? source}》...` : `查阅《${SOURCE_LABELS[source] ?? source}》`}
         </span>
         {!isLoading && results && (
           <Badge variant="secondary" className="text-[10px]">
@@ -67,7 +77,7 @@ function ClassicSubCard({ query, source, results, isLoading }: {
   )
 }
 
-export function AnalysisCard({ progress, state, preliminary }: AnalysisCardProps) {
+export function AnalysisCard({ progress, state, preliminary, question }: AnalysisCardProps) {
   const isComplete = state === 'output-available' && !preliminary
   const [collapsed, setCollapsed] = useState(false)
 
@@ -76,7 +86,9 @@ export function AnalysisCard({ progress, state, preliminary }: AnalysisCardProps
   const classicCount = progress.classicQueries?.length ?? 0
   const summaryText = progress.error
     ? `分析失败: ${progress.error}`
-    : `分析完成 · 引用 ${classicCount} 部典籍`
+    : question
+      ? `「${question}」分析完成 · 引用 ${classicCount} 部典籍`
+      : `分析完成 · 引用 ${classicCount} 部典籍`
 
   return (
     <Collapsible
@@ -94,7 +106,11 @@ export function AnalysisCard({ progress, state, preliminary }: AnalysisCardProps
             : <SearchIcon className="size-4 animate-pulse text-primary" />}
           <div className="flex flex-col items-start gap-0.5">
             <span className="font-medium text-sm">
-              {isComplete ? summaryText : '正在分析命盘，请稍候...'}
+              {isComplete
+                ? summaryText
+                : question
+                  ? `正在分析「${question}」，请稍候...`
+                  : '正在分析命盘，请稍候...'}
             </span>
             {!isComplete && progress.phase !== 'started' && (
               <span className="text-[11px] text-muted-foreground">待分析完成后，我会为您生成详细解读</span>

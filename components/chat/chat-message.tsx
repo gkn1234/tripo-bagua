@@ -90,6 +90,7 @@ export function ChatMessage({ message, isLast, isStreaming, onRegenerate, onSend
                   <BaguaCard
                     key={`tool-${message.id}-${index}`}
                     data={output.data as BaziResult}
+                    gender={output.gender as 0 | 1 | undefined}
                   />
                 )
               }
@@ -99,12 +100,15 @@ export function ChatMessage({ message, isLast, isStreaming, onRegenerate, onSend
             if (toolName === 'deepAnalysis') {
               if (output) {
                 const preliminary = 'preliminary' in part ? Boolean(part.preliminary) : false
+                const input = 'input' in part ? (part.input as Record<string, unknown>) : undefined
+                const question = input?.question as string | undefined
                 return (
                   <AnalysisCard
                     key={`tool-${message.id}-${index}`}
                     progress={output as unknown as AnalysisProgress}
                     state={state}
                     preliminary={preliminary}
+                    question={question}
                   />
                 )
               }
@@ -132,7 +136,7 @@ export function ChatMessage({ message, isLast, isStreaming, onRegenerate, onSend
                         prompt={output.prompt as string}
                         negativePrompt={output.negativePrompt as string | null | undefined}
                         title={toolName === 'retextureMascot' ? '纹理重生成提示词' : '吉祥物生成提示词'}
-                        disabled={!isLast || isStreaming}
+                        disabled={isStreaming}
                         onRegenerate={(p, np) => {
                           onSendMessage?.(`请直接使用以下提示词重新生成吉祥物：\n\nprompt: ${p}${np ? `\nnegativePrompt: ${np}` : ''}`)
                         }}

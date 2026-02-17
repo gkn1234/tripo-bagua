@@ -40,7 +40,7 @@ export const tripoClient = {
         type: 'text_to_model',
         prompt,
         negative_prompt: options?.negativePrompt ?? 'blurry, low quality, multiple heads, floating parts, disconnected geometry, extra limbs, deformed',
-        model_version: 'v2.5-20250123',
+        model_version: 'v3.0-20250812',
         texture_quality: 'detailed',
       }),
     })

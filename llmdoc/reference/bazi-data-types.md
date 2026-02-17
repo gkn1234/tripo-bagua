@@ -11,9 +11,9 @@
 - **分析 Agent：** `lib/bazi/analysis-agent.ts` (`runAnalysis`, `runAnalysisStream`) - AnalysisEntry 的实际生产者。`runAnalysisStream` 产出 AnalysisEvent 流。
 - **五行统计：** `lib/bazi/five-elements.ts` (`countFiveElements`) - FiveElements 的计算实现。
 - **颜色映射：** `lib/bazi/colors.ts` (`WU_XING_COLORS`, `getWuXingColor`) - 五行到 OKLCH 颜色的映射表。
-- **工具 Schema：** `app/api/chat/route.ts:112-203` - analyzeBazi 和 deepAnalysis（async* execute 生成器）工具定义。
+- **工具 Schema：** `app/api/chat/route.ts:113-206` - analyzeBazi（保存 currentGender，返回含 gender 字段）和 deepAnalysis（async* execute 生成器，传递 currentGender）工具定义。
 - **持久化：** `lib/persistence/chat-db.ts` (`saveAnalysisNote`, `getAnalysisNote`) - AnalysisNote 的 IndexedDB 读写。
-- **UI 消费者：** `components/chat/bagua-card.tsx` (`BaguaCard`) - BaziResult 的主要渲染组件；`components/chat/analysis-card.tsx` (`AnalysisCard`, `ClassicSubCard`) - AnalysisProgress 的流式渲染组件。
+- **UI 消费者：** `components/chat/bagua-card.tsx` (`BaguaCard`) - BaziResult 的主要渲染组件，接收 `gender` prop 显示乾造/坤造；`components/chat/analysis-card.tsx` (`AnalysisCard`, `ClassicSubCard`, `SOURCE_LABELS`) - AnalysisProgress 的流式渲染组件，接收 `question` prop 展示追问问题，`SOURCE_LABELS` 映射典籍 ID 到中文书名。
 - **架构文档：** `/llmdoc/architecture/bazi-system.md` - 八字系统的完整架构和执行流程。
 
 ## 3. 类型层级关系
@@ -29,7 +29,7 @@ BaziInput (输入)
          |         |    |- cangGan[]: CangGan (name, shiShen)
          |         |- naYin: string
          |- fiveElements: FiveElements (wood, fire, earth, metal, water)
-         |- gods: string[][] (神煞, 来自 cantian-tymext)
+         |- gods: Record<'year'|'month'|'day'|'hour', string[]> (神煞, 按柱位分组, 来自 cantian-tymext)
          |- decadeFortunes: DecadeFortune[] (ganZhi, startYear, endYear, startAge, endAge)
          |- relations: Record<string, unknown> (刑冲合害, 来自 cantian-tymext)
          |- solar/lunar/bazi/zodiac/dayMaster: string (基础信息)
@@ -73,6 +73,6 @@ AnalysisProgress (deepAnalysis yield 快照)
 - `BaziInput.gender`: `0 | 1`（0 = 女, 1 = 男），默认值 1，影响大运顺逆和神煞计算。
 - `BaziInput.minute`: 可选，默认 0，`tyme4ts` 需要但八字计算主要取决于时辰。
 - `TianGan.shiShen`: 日柱天干（日主）无十神，该字段为 `undefined`。
-- `gods` 和 `relations`: 来自闭源库 `cantian-tymext`，计算失败时分别为空数组和空对象。
+- `gods`: `Record<'year'|'month'|'day'|'hour', string[]>`，来自闭源库 `cantian-tymext`。每个 key 对应一柱的神煞列表。计算失败时所有柱位为空数组。`relations` 来自同一闭源库，计算失败时为空对象。
 - `AnalysisEntry.question`: `null` 表示首次综合分析，非 null 表示针对特定问题的补充分析。
 - `AnalysisNote.analyses`: 追加式数组，每次分析追加新条目，分析 Agent 可看到所有历史条目。

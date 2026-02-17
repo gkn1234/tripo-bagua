@@ -5,7 +5,7 @@
 1. **页面加载初始化：** `hooks/use-chat-session.ts:87-109` 的 mount effect 执行，调用 `getLatestSession()` 恢复最新会话 + `getAnalysisNote()` 恢复 analysisNote。若无会话，调用 `createSession()` 生成新会话。
 2. **用户输入消息：** 在 `PromptInput` 中输入文本后按 Enter，触发 `sendMessage({ text })`。
 3. **Transport 发送请求：** `hooks/use-chat-session.ts:17-23` 的 `DefaultChatTransport` 向 `/api/chat` 发送 POST，请求体包含 `messages`、`pendingTaskId` 和 `analysisNote`。
-4. **API 路由处理：** `app/api/chat/route.ts:106-234` 解析请求，`buildAnalysisContext` 将 analysisNote 注入 system prompt，`streamText` 调用 DeepSeek 模型（含五个工具），返回流式响应。
+4. **API 路由处理：** `app/api/chat/route.ts:106-264` 解析请求，`buildAnalysisContext` 将 analysisNote 注入 system prompt，`streamText` 调用 DeepSeek 模型（含五个工具），返回流式响应。
 5. **消息实时更新：** `useChat` 自动解析 SSE 流，更新 `messages` 数组。
 6. **analysisNote 同步：** `hooks/use-chat-session.ts:58-85` 检测 `analyzeBazi`/`deepAnalysis` 工具输出中的 `analysisNote`，保存到 IndexedDB + Zustand。
 7. **自动持久化：** 消息变化后 300ms 防抖写入 IndexedDB，同时从首条用户消息提取前 20 字符作为会话标题。
@@ -13,7 +13,7 @@
 ## 2. 添加新的 AI 工具
 
 1. **定义工具 Schema：** 在 `app/api/chat/route.ts` 中使用 `tool()` 函数定义新工具，包含 `description`、`inputSchema`（Zod schema）和 `execute` 异步函数。**注意：execute 是必需的**——没有 execute 会导致 DeepSeek API 拒绝后续请求。
-2. **注册到 streamText：** 将新工具添加到 `app/api/chat/route.ts:230` 的 `tools` 对象中：`tools: { analyzeBazi, generateMascot, retextureMascot, presentOptions, deepAnalysis, yourNewTool }`。
+2. **注册到 streamText：** 将新工具添加到 `app/api/chat/route.ts:259` 的 `tools` 对象中：`tools: { analyzeBazi, generateMascot, retextureMascot, presentOptions, deepAnalysis, yourNewTool }`。
 3. **更新 System Prompt：** 在 `app/api/chat/route.ts:25-83` 的 `systemPrompt` 中描述新工具的使用场景。
 4. **添加前端渲染：** 在 `components/chat/chat-message.tsx` 的 tool parts 路由逻辑中为新工具添加条件分支。
 5. **注册工具标题：** 在 `components/chat/chat-message.tsx` 的 `TOOL_TITLES` 映射表中添加中文名称。当前已注册：`analyzeBazi`、`generateMascot`、`retextureMascot`、`presentOptions`、`deepAnalysis`。

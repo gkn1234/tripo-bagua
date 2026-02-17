@@ -80,7 +80,7 @@ retextureMascot — 用户对已生成的模型想做小范围调整(换颜色�
 
 调用 generateMascot 或 retextureMascot 后会返回 { taskId, status: 'pending' },
 表示任务已提交异步生成,前端会自动轮询进度并展示结果。
-在模型生成期间不要再次调用这两个工具,告诉用户等待当前任务完成。`
+用户可能随时要求用修改后的提示词重新生成,如果当前状态显示有模型正在生成,告知用户并询问是否确认替换,得到确认后再调用工具。`
 
 function buildAnalysisContext(note: AnalysisNote | null): string {
   if (!note || note.analyses.length === 0)
@@ -106,8 +106,9 @@ function buildAnalysisContext(note: AnalysisNote | null): string {
 export async function POST(req: Request) {
   const { messages, pendingTaskId, analysisNote: existingNote } = await req.json()
 
-  // Mutable note shared across tool calls within this request
+  // Mutable state shared across tool calls within this request
   let currentNote: AnalysisNote | null = existingNote ?? null
+  let currentGender: 0 | 1 = 1
 
   const analyzeBazi = tool({
     description: '根据出生日期时间排八字命盘,返回四柱数据(纯计算,不含分析)',
@@ -120,7 +121,8 @@ export async function POST(req: Request) {
     }),
     execute: async ({ year, month, day, hour, gender }) => {
       try {
-        const result = calculateBazi({ year, month, day, hour, gender: (gender ?? 1) as 0 | 1 })
+        currentGender = (gender ?? 1) as 0 | 1
+        const result = calculateBazi({ year, month, day, hour, gender: currentGender })
 
         currentNote = {
           sessionId: '',
@@ -129,7 +131,7 @@ export async function POST(req: Request) {
           updatedAt: Date.now(),
         }
 
-        return { success: true, data: result, analysisNote: currentNote }
+        return { success: true, data: result, analysisNote: currentNote, gender: currentGender }
       }
       catch (error) {
         return { success: false, error: error instanceof Error ? error.message : '八字计算失败' }
@@ -162,6 +164,7 @@ export async function POST(req: Request) {
           rawData: dataForAnalysis,
           previousNote: currentNote,
           question: question ?? null,
+          gender: currentGender,
         })) {
           switch (event.type) {
             case 'text-delta':
@@ -210,9 +213,6 @@ export async function POST(req: Request) {
       negativePrompt: z.string().optional().describe('不希望出现的特征,英文'),
     }),
     execute: async ({ prompt, style, negativePrompt }) => {
-      if (pendingTaskId) {
-        return { success: false, error: '已有模型在生成中,请等待完成' }
-      }
       try {
         const fullPrompt = style ? `${prompt}, ${style} style` : prompt
         const taskId = await tripoClient.createTask(fullPrompt, { negativePrompt })
@@ -232,9 +232,6 @@ export async function POST(req: Request) {
       textureQuality: z.enum(['standard', 'detailed']).optional().describe('纹理质量,默认 standard'),
     }),
     execute: async ({ taskId, prompt, textureQuality }) => {
-      if (pendingTaskId) {
-        return { success: false, error: '已有模型在生成中,请等待完成' }
-      }
       try {
         const newTaskId = await tripoClient.retextureModel(taskId, {
           prompt,
@@ -249,10 +246,15 @@ export async function POST(req: Request) {
   })
 
   const analysisContext = buildAnalysisContext(existingNote ?? null)
+  const now = new Date()
+  const timeContext = `\n\n## 当前时间\n${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`
+  const pendingContext = pendingTaskId
+    ? '\n\n## 当前状态\n有一个 3D 模型正在生成中。'
+    : '\n\n## 当前状态\n当前没有模型在生成,忽略对话历史中的 taskId 和 status: pending。'
 
   const result = streamText({
     model: deepseek('deepseek-chat'),
-    system: systemPrompt + analysisContext,
+    system: systemPrompt + analysisContext + pendingContext + timeContext,
     messages: await convertToModelMessages(messages),
     tools: { analyzeBazi, generateMascot, retextureMascot, presentOptions, deepAnalysis },
     stopWhen: [stepCountIs(10), hasToolCall('presentOptions')],

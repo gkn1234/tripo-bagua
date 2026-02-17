@@ -30,24 +30,24 @@ describe('buildUserPrompt', () => {
     zodiac: '马',
     dayMaster: '甲',
     fourPillars: {} as BaziResult['fourPillars'],
-    gods: [],
+    gods: { year: [], month: [], day: [], hour: [] },
     decadeFortunes: [],
     relations: {},
   }
 
   it('should include raw data section', () => {
-    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: null })
+    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: null, gender: 1 })
     expect(prompt).toContain('## 排盘数据')
     expect(prompt).toContain('"dayMaster": "甲"')
   })
 
   it('should include comprehensive analysis instruction when no question', () => {
-    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: null })
+    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: null, gender: 1 })
     expect(prompt).toContain('全面综合分析')
   })
 
   it('should include specific question when provided', () => {
-    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: '事业方向' })
+    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: '事业方向', gender: 1 })
     expect(prompt).toContain('事业方向')
   })
 
@@ -63,9 +63,15 @@ describe('buildUserPrompt', () => {
       }],
       updatedAt: Date.now(),
     }
-    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: note, question: '婚姻' })
+    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: note, question: '婚姻', gender: 1 })
     expect(prompt).toContain('## 已有分析')
     expect(prompt).toContain('日主甲木偏弱')
     expect(prompt).toContain('婚姻')
+  })
+
+  it('should include gender and current year', () => {
+    const prompt = buildUserPrompt({ rawData: mockRawData, previousNote: null, question: null, gender: 0 })
+    expect(prompt).toContain('性别: 女')
+    expect(prompt).toContain(`当前年份: ${new Date().getFullYear()}`)
   })
 })
