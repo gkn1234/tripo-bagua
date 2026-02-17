@@ -37,8 +37,8 @@
 - **3. 排盘计算（纯计算）：** `app/api/chat/route.ts:121-137` -- `analyzeBazi.execute` 调用 `calculateBazi(input)` 同步完成排盘，创建初始 `currentNote`（只有 rawData，analyses 保留已有或空数组），返回排盘数据。不调用 `runAnalysis`。
 - **4. 自动触发综合分析（流式）：** 模型自动连续调用 `deepAnalysis`（不传 question），`app/api/chat/route.ts:140-203` 的 `async* execute` 生成器消费 `runAnalysisStream`，通过 150ms 节流 yield `AnalysisProgress` 快照。五个 phase：`started` -> `analyzing`（文本流入）-> `querying`（查阅典籍中）-> `queried`（典籍结果返回）-> `complete`（分析完成，含最终 analysisNote）。
 - **5. 组装 AnalysisNote：** `runAnalysisStream` 的 `finish` 事件携带完整 `AnalysisEntry`，`deepAnalysis` 在收到 finish 后追加到 `currentNote.analyses`，最终 yield `{ phase: 'complete', analysisNote: currentNote }`。
-- **6. 前端流式渲染：** `components/chat/chat-message.tsx:97-108` 在 `partial-output-available`（中间 yield）和 `output-available`（最终 yield）状态都渲染 `AnalysisCard`（`components/chat/analysis-card.tsx`），根据 `AnalysisProgress.phase` 展示不同 UI 状态。
-- **7. 前端同步：** `hooks/use-chat-session.ts:81-107` -- `syncAnalysisNote` effect 只匹配 `output-available` 状态中的 `analysisNote`，保存到 IndexedDB 并更新 Zustand。中间状态的 yield 不会触发持久化。
+- **6. 前端流式渲染：** `components/chat/chat-message.tsx:97-110` 在 `output-available` 状态且有 output 时渲染 `AnalysisCard`（`components/chat/analysis-card.tsx`）。从 tool part 提取 `preliminary` 字段传给 AnalysisCard，`isComplete = state === 'output-available' && !preliminary` 判断是否为最终结果。中间 yield（`preliminary: true`）和最终 yield（`preliminary` 为 falsy）均被渲染，UI 根据 `AnalysisProgress.phase` 和完成状态展示不同界面。
+- **7. 前端同步：** `hooks/use-chat-session.ts:81-107` -- `syncAnalysisNote` effect 只匹配 `output-available` 状态中的 `output.analysisNote`。中间 yield 的 output 不含 `analysisNote`，因此 `output.analysisNote` 检查自然过滤了中间状态，只有最终 yield 触发持久化。
 - **8. 对话 Agent 解读：** 下一轮请求时 `buildAnalysisContext` 将分析结论注入 system prompt，对话 Agent 翻译为用户友好的语言。
 - **9. UI 渲染：** `chat-message.tsx` 路由到 `BaguaCard` 展示排盘数据；`AnalysisCard` 展示分析过程和结果。
 
@@ -54,7 +54,7 @@
 - **职责分离：** analyzeBazi 纯计算（同步、瞬间返回），deepAnalysis 负责所有 AI 分析（首次综合 + 补充分析）。分析 Agent 专注准确性和完整性，对话 Agent 专注用户体验和表达。
 - **闭包状态共享：** `currentNote` 在 POST handler 作用域内声明为 `let`，`analyzeBazi` 写入后 `deepAnalysis` 可立即读取，无需等待前端同步往返。这使得 multi-step tool calling（analyzeBazi -> deepAnalysis）在单次请求内完成。
 - **增量分析：** AnalysisNote 采用追加式设计，每次分析都能看到之前的结论，避免重复分析，支持渐进深入。
-- **流式分析 UX：** `runAnalysisStream` 将 `streamText` 的 `fullStream` 事件拆分为四种 `AnalysisEvent`（text-delta / tool-call / tool-result / finish），`deepAnalysis` 的 `async* execute` 消费事件流并 yield `AnalysisProgress` 快照（150ms 节流），前端 `AnalysisCard` 根据 phase 实时渲染分析文本、典籍查阅状态。AI SDK 6.x 中 yield 的中间值对应 `partial-output-available` 状态，最终 yield 对应 `output-available`。
+- **流式分析 UX：** `runAnalysisStream` 将 `streamText` 的 `fullStream` 事件拆分为四种 `AnalysisEvent`（text-delta / tool-call / tool-result / finish），`deepAnalysis` 的 `async* execute` 消费事件流并 yield `AnalysisProgress` 快照（150ms 节流），前端 `AnalysisCard` 根据 phase 和 `preliminary` prop 实时渲染分析文本、典籍查阅状态。AI SDK 6.x 中 `async* execute` 的中间 yield 和最终 yield 均为 `state: 'output-available'`，通过 `preliminary: true` 字段区分中间 yield。
 - **流式属性名注意：** AI SDK 6.x `streamText.fullStream` 中：text-delta 事件用 `part.text`（非 textDelta），tool-call 事件用 `part.input`（非 args），tool-result 事件用 `part.output`（非 result）。
 - **早子时算法：** `LunarHour.provider = new LunarSect2EightCharProvider()` 配置"早子时算当日"。
 - **容错设计：** `getShen` 和 `calculateRelation` 均包裹在 try-catch 中，闭源库异常不会阻断主流程。

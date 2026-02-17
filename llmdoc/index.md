@@ -15,9 +15,9 @@ AI 驱动的八字命理分析与 3D 吉祥物生成 Web 应用（Next.js 16 + D
 | 文档 | 说明 |
 |------|------|
 | `architecture/bazi-system.md` | 八字命理系统架构：analyzeBazi 纯计算 + deepAnalysis 流式分析（async* execute + runAnalysisStream）、闭包状态共享（currentNote）、排盘计算、analysisNote 共享记忆 |
-| `architecture/chat-system.md` | 聊天系统架构：Vercel AI SDK 三层架构、五个工具（deepAnalysis 为 async* 生成器工具）、analysisNote 双向同步、IndexedDB 持久化（DB_VERSION=2）、sanitizeMessages 防御 MissingToolResultsError |
+| `architecture/chat-system.md` | 聊天系统架构：Vercel AI SDK 三层架构、五个工具（deepAnalysis 为 async* 生成器工具，中间/最终 yield 均为 output-available 通过 preliminary 字段区分）、analysisNote 双向同步、IndexedDB 持久化（DB_VERSION=2）、sanitizeMessages 防御 MissingToolResultsError |
 | `architecture/3d-model-system.md` | 3D 模型生成与查看架构：Tripo 异步任务管线、前端轮询、代理路由、分屏 ModelViewer 渲染 |
-| `architecture/ui-component-system.md` | UI 组件体系架构：shadcn/ui 分层组件、OKLCH 主题系统、AnalysisCard 流式分析卡片、页面布局流 |
+| `architecture/ui-component-system.md` | UI 组件体系架构：shadcn/ui 分层组件、OKLCH 主题系统、AnalysisCard 流式分析卡片（preliminary prop 区分中间/完成状态）、MessageContent assistant 宽度修复、页面布局流 |
 | `architecture/ai-elements-integration.md` | Vercel AI Elements 集成：第三方库原语、7 个本地封装组件、Streamdown/Shiki/Motion 集成、数据流 |
 
 ## Guides

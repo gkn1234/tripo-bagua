@@ -12,9 +12,9 @@
 - `app/globals.css`: 设计系统核心，定义 OKLCH 色彩变量、圆角系统、Tailwind v4 主题桥接、基础层样式。
 - `components/ui/*.tsx` (18 个组件): 基础 UI 层，全部基于 Radix UI 或其他无样式原语封装，使用 CVA 管理变体。
 - `components/sidebar/index.tsx` (`Sidebar`): 业务组件，响应式折叠侧边栏，集成会话列表和主题切换。
-- `components/ai-elements/*.tsx` (7 个组件): AI 聊天专用组件层，包含 Conversation、Message、PromptInput、Reasoning、Tool、CodeBlock、Shimmer。
+- `components/ai-elements/*.tsx` (7 个组件): AI 聊天专用组件层，包含 Conversation、Message、PromptInput、Reasoning、Tool、CodeBlock、Shimmer。`MessageContent` 包含 `group-[.is-assistant]:w-full` 确保 assistant 消息中的工具卡片（如 AnalysisCard）宽度 100%。
 - `components/chat/index.tsx` (`Chat`): 页面级聊天组合组件，整合 AI Elements 和 useChatSession hook。
-- `components/chat/analysis-card.tsx` (`AnalysisCard`, `ClassicSubCard`): 分析过程流式渲染卡片。`AnalysisCard` 根据 `AnalysisProgress.phase` 渲染不同状态（骨架屏 -> 流式文本 -> 典籍查阅 -> 完成摘要折叠）。`ClassicSubCard` 为嵌套的典籍查阅子卡片，可展开显示经典原文。基于 Collapsible、Badge 等基础 UI 组件构建。
+- `components/chat/analysis-card.tsx` (`AnalysisCard`, `ClassicSubCard`): 分析过程流式渲染卡片。`AnalysisCard` 接收 `progress`（AnalysisProgress）、`state`（tool part state）和 `preliminary`（boolean，中间 yield 为 true）三个 prop，通过 `isComplete = state === 'output-available' && !preliminary` 判断完成状态。未完成时头部标题「正在分析命盘，请稍候...」副标题「待分析完成后，我会为您生成详细解读」，展开内容末尾有虚线分隔的同文案提示；完成后显示「分析完成 · 引用 N 部典籍」+ 绿色对勾图标，可折叠。`ClassicSubCard` 为嵌套的典籍查阅子卡片，可展开显示经典原文。基于 Collapsible、Badge 等基础 UI 组件构建。
 - `components/order-modal/index.tsx` (`OrderModal`): 业务弹窗，基于 Dialog 封装的下单打印界面（待实现）。
 - `components/ui/resizable.tsx` (`ResizablePanelGroup`, `ResizablePanel`, `ResizableHandle`): 可调整大小面板，用于主页分栏布局。
 

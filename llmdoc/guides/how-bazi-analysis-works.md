@@ -21,7 +21,7 @@
    - `queried`：典籍结果作为可展开子卡片（ClassicSubCard）
    - `complete`：自动折叠为摘要行，显示引用典籍数量
 
-5. **前端 analysisNote 同步：** `hooks/use-chat-session.ts:81-107` 的 effect 只匹配 `output-available` 状态（即最终 yield）中的 `analysisNote`，保存到 IndexedDB 和 Zustand。中间状态（`partial-output-available`）不触发持久化。下次请求时 transport body 自动携带。
+5. **前端 analysisNote 同步：** `hooks/use-chat-session.ts:81-107` 的 effect 只匹配 `output-available` 状态中的 `output.analysisNote`，保存到 IndexedDB 和 Zustand。AI SDK 6.x 的 `async* execute` 中间 yield 和最终 yield 均为 `state: 'output-available'`，通过 `preliminary: true` 字段区分；中间 yield 的 output 不含 `analysisNote`，因此 `output.analysisNote` 检查自然过滤了中间状态。下次请求时 transport body 自动携带。
 
 6. **对话 Agent 解读：** `buildAnalysisContext`（`app/api/chat/route.ts:85-104`）将分析结论注入 system prompt，对话 Agent 用大白话翻译给用户。
 

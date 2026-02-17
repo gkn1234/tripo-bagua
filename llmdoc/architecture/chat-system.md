@@ -45,13 +45,13 @@
    - `tool-generateMascot`（output-available + taskId）-> `ModelPreview`
    - `tool-retextureMascot`（output-available + taskId）-> `ModelPreview`
    - `tool-presentOptions`（output-available + output.options）-> `OptionsButtons`
-   - `tool-deepAnalysis`（partial-output-available 或 output-available + output）-> `AnalysisCard`（流式分析卡片，根据 AnalysisProgress.phase 渲染不同状态）
+   - `tool-deepAnalysis`（output-available + output）-> `AnalysisCard`（流式分析卡片，从 tool part 提取 `preliminary` 字段区分中间/最终 yield，根据 AnalysisProgress.phase 渲染不同状态）
    - `tool-*`（其他状态）-> `Tool`
 
 ### 3.4 工具调用流程
 
 - **analyzeBazi：** `app/api/chat/route.ts:112-138` -- 纯计算工具，调用 `calculateBazi` 排盘，创建初始 `currentNote`（只有 rawData，无 analyses），返回 `{ data, analysisNote }`。不调用 `runAnalysis`。
-- **deepAnalysis：** `app/api/chat/route.ts:140-203` -- `async* execute` 生成器工具（AI SDK 6.x 特性）。`question` 参数可选。消费 `runAnalysisStream` async generator，通过 150ms 节流 yield `AnalysisProgress` 快照。五个 phase：`started` -> `analyzing`（文本 delta 累积）-> `querying`（查阅典籍中）-> `queried`（典籍结果返回）-> `complete`（含最终 analysisNote）。yield 的中间值在前端对应 `partial-output-available` 状态，最终 yield 对应 `output-available`。
+- **deepAnalysis：** `app/api/chat/route.ts:140-203` -- `async* execute` 生成器工具（AI SDK 6.x 特性）。`question` 参数可选。消费 `runAnalysisStream` async generator，通过 150ms 节流 yield `AnalysisProgress` 快照。五个 phase：`started` -> `analyzing`（文本 delta 累积）-> `querying`（查阅典籍中）-> `queried`（典籍结果返回）-> `complete`（含最终 analysisNote）。AI SDK 6.x 的 `async* execute` 没有 `partial-output-available` 状态：中间 yield 和最终 yield 均为 `state: 'output-available'`，中间 yield 带 `preliminary: true` 字段区分。
 - **generateMascot：** `app/api/chat/route.ts:178-198` -- 检查 `pendingTaskId` 防重复，支持 `negativePrompt` 参数，调用 `tripoClient.createTask` 返回 taskId。
 - **retextureMascot：** `app/api/chat/route.ts:200-222` -- 对已生成模型重新生成纹理，检查 `pendingTaskId` 防重复。
 - **presentOptions：** `app/api/chat/route.ts:14-23` -- execute 返回 `{ options }` 填充 tool result。`hasToolCall('presentOptions')` 停止 multi-step loop。
@@ -83,7 +83,7 @@
 - **presentOptions 必须有 execute：** 没有 execute 时 tool part state 是 `input-available`，但对话历史缺少 tool result 会导致 DeepSeek API 拒绝后续请求。
 - **stopWhen 数组语义是 OR：** 任一条件满足即停止。
 - **Transport body 携带 analysisNote：** 每次请求将内存中的 analysisNote 传给服务端，服务端用于 `buildAnalysisContext` 注入 system prompt 和 `runAnalysis` 的上下文。
-- **analysisNote 同步兼容性：** `hooks/use-chat-session.ts` 的 `syncAnalysisNote` effect 只匹配 `output-available` 状态，因此 `deepAnalysis` 的中间 yield（`partial-output-available`）不会触发持久化。`sanitizeMessages` 无需改动，`partial-output-available` 状态的 tool parts 在刷新后被自然过滤。
-- **async* execute 生成器工具：** AI SDK 6.x 特性。`deepAnalysis` 使用 `async*` 函数签名，yield 的中间值在前端 tool part 上表现为 `state: 'partial-output-available'`、`output` 为最近一次 yield 的值。最终 yield 的值变为 `state: 'output-available'`。
+- **analysisNote 同步兼容性：** `hooks/use-chat-session.ts` 的 `syncAnalysisNote` effect 只匹配 `output-available` 状态中的 `output.analysisNote`，中间 yield（`preliminary: true`）的 output 中不含 `analysisNote`，因此 `output.analysisNote` 检查自然过滤了中间状态。`sanitizeMessages` 无需改动。
+- **async* execute 生成器工具：** AI SDK 6.x 特性。`deepAnalysis` 使用 `async*` 函数签名，中间 yield 和最终 yield 在前端 tool part 上均为 `state: 'output-available'`，通过 `preliminary: true` 字段区分中间 yield。最终 yield 的 `preliminary` 为 falsy。前端 `chat-message.tsx:100` 从 tool part 提取 `preliminary` 传给 `AnalysisCard`。
 - **Chat 组件返回模式：** `Chat()` 返回 `{ currentSession, loadSession, newSession, ui }` 对象，分离数据控制与 UI 渲染。
 - **动态导入持久化模块：** `await import('@/lib/persistence/chat-db')` 减少初始包体积。
