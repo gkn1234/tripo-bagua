@@ -25,6 +25,7 @@ import { AnalysisCard } from './analysis-card'
 import { BaguaCard } from './bagua-card'
 import { ModelPreview } from './model-preview'
 import { OptionsButtons } from './options-buttons'
+import { PromptCard } from './prompt-card'
 
 const TOOL_TITLES: Record<string, string> = {
   analyzeBazi: '分析八字',
@@ -109,13 +110,6 @@ export function ChatMessage({ message, isLast, isStreaming, onRegenerate, onSend
               }
             }
 
-            // ModelPreview for generateMascot
-            if (toolName === 'generateMascot') {
-              if (state === 'output-available' && output?.taskId) {
-                return <ModelPreview key={`tool-${message.id}-${index}`} taskId={output.taskId as string} />
-              }
-            }
-
             // OptionsButtons for presentOptions (execute returns options, hasToolCall stops the loop)
             if (toolName === 'presentOptions' && state === 'output-available' && output?.options) {
               return (
@@ -128,10 +122,25 @@ export function ChatMessage({ message, isLast, isStreaming, onRegenerate, onSend
               )
             }
 
-            // ModelPreview for retextureMascot (same rendering as generateMascot)
-            if (toolName === 'retextureMascot') {
+            // PromptCard + ModelPreview for generateMascot / retextureMascot
+            if (toolName === 'generateMascot' || toolName === 'retextureMascot') {
               if (state === 'output-available' && output?.taskId) {
-                return <ModelPreview key={`tool-${message.id}-${index}`} taskId={output.taskId as string} />
+                return (
+                  <div key={`tool-${message.id}-${index}`} className="space-y-0">
+                    {typeof output.prompt === 'string' && (
+                      <PromptCard
+                        prompt={output.prompt as string}
+                        negativePrompt={output.negativePrompt as string | null | undefined}
+                        title={toolName === 'retextureMascot' ? '纹理重生成提示词' : '吉祥物生成提示词'}
+                        disabled={!isLast || isStreaming}
+                        onRegenerate={(p, np) => {
+                          onSendMessage?.(`请直接使用以下提示词重新生成吉祥物：\n\nprompt: ${p}${np ? `\nnegativePrompt: ${np}` : ''}`)
+                        }}
+                      />
+                    )}
+                    <ModelPreview taskId={output.taskId as string} />
+                  </div>
+                )
               }
             }
 
