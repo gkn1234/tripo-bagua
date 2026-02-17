@@ -40,7 +40,7 @@ export default function Home() {
             <Button variant="ghost" size="icon" className="size-8" onClick={() => setSidebarOpen(true)}>
               <Menu className="size-4" />
             </Button>
-            <span className="text-sm font-semibold font-[var(--font-display)]">Tripo Bagua</span>
+            <span className="text-sm font-semibold font-[var(--font-display)]">开运造物</span>
             {isSplit && (
               <Button
                 variant="outline"

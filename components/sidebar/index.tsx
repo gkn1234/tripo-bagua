@@ -69,7 +69,7 @@ export function Sidebar({ currentSessionId, onSelectSession, onNewSession }: Sid
           {isMobile ? <X className="size-4" /> : <Menu className="size-4" />}
         </Button>
         {(isMobile || !collapsed) && (
-          <span className="truncate text-sm font-semibold font-[var(--font-display)]">Tripo Bagua</span>
+          <span className="truncate text-sm font-semibold font-[var(--font-display)]">开运造物</span>
         )}
       </div>
 

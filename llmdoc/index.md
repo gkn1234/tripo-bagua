@@ -1,4 +1,4 @@
-# Tripo Bagua - 文档索引
+# 开运造物 - 文档索引
 
 AI 驱动的八字命理分析与 3D 吉祥物生成 Web 应用（Next.js 16 + DeepSeek 双 Agent + Tripo API + React Three Fiber）。
 

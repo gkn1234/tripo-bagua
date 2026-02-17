@@ -33,7 +33,7 @@ interface ChatDB extends DBSchema {
   }
 }
 
-const DB_NAME = 'tripo-bagua'
+const DB_NAME = 'kaiyun-zaowu'
 const DB_VERSION = 2
 
 let dbPromise: Promise<IDBPDatabase<ChatDB>> | null = null

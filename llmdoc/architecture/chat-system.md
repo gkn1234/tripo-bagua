@@ -75,7 +75,7 @@
 ### 3.7 会话持久化策略
 
 - **Zustand（内存层）：** 管理 phase、modelUrl、pendingTaskId、analysisNote、maskId -- 页面刷新后重置（maskId 重置为 'default'），会话切换时 `reset()` 清空（含 analysisNote），但 maskId 不被 reset 清空。
-- **IndexedDB（持久层）：** 数据库名 `tripo-bagua`，DB_VERSION=2，三个 ObjectStore：`sessions`（by-updated 索引，Session 含可选 maskId 字段）、`messages`（sessionId 为主键）、`analysisNotes`（sessionId 为主键，v2 新增）。
+- **IndexedDB（持久层）：** 数据库名 `kaiyun-zaowu`，DB_VERSION=2，三个 ObjectStore：`sessions`（by-updated 索引，Session 含可选 maskId 字段）、`messages`（sessionId 为主键）、`analysisNotes`（sessionId 为主键，v2 新增）。
 - **写入时机：** 消息变化后 300ms 防抖 -> `saveSession()`；analysisNote 变化时 -> `saveAnalysisNote()` 立即写入。
 - **读取时机：** 页面加载 -> `getLatestSession()` + `getAnalysisNote()` 恢复；会话切换 -> `getSessionMessages()` + `getAnalysisNote()` 加载。
 - **删除：** `deleteSession` 事务性删除 sessions + messages + analysisNotes。

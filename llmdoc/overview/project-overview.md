@@ -1,8 +1,8 @@
-# Tripo Bagua - 项目总览
+# 开运造物 - 项目总览
 
 ## 1. Identity
 
-- **项目名称:** tripo-bagua (v0.1.0)
+- **项目名称:** kaiyun-zaowu (v0.1.0)
 - **定义:** AI 驱动的八字命理分析与 3D 吉祥物生成 Web 应用。
 - **用途:** 用户输入生辰八字，由双 Agent 架构（分析 Agent + 对话 Agent）解读命盘，自动生成个性化 3D 吉祥物模型，支持在线预览和下单 3D 打印。
 
@@ -51,7 +51,7 @@ components/
   ai-elements/                  # Vercel AI Elements 组件
   chat/                         # 聊天业务组件 (Chat/MaskGuide/ChatMessage/BaguaCard/AnalysisCard/ModelPreview/PromptCard/OptionsButtons)
   model-viewer/                 # React Three Fiber 3D 查看器
-  order-modal/                  # 订单弹窗 [表单未实现]
+  order-modal/                  # 订单弹窗 (暂未开通提示)
   sidebar/                      # 会话列表侧边栏 + 主题切换
   ui/                           # shadcn/ui 基础组件 (18 个)
 hooks/
@@ -94,7 +94,7 @@ vitest.config.ts                # Vitest 测试配置 (globals + @ 别名)
 **未实现 / 阻塞项:**
 - `app/api/order/route.ts` - 订单创建 API (返回 501), 阻塞: Shop 中台 API Key 未获取
 - `app/api/tripo/generate/route.ts` - 独立 Tripo 任务提交 (返回 501)
-- `components/order-modal/index.tsx` - 订单表单内容为空
+- `components/order-modal/index.tsx` - 订单弹窗已实现暂未开通提示（TriangleAlert 警告图标 + "下单功能暂未开通，Shop 中台 API Key 尚未获取。" + "知道了"关闭按钮），但实际下单功能仍未实现
 - `lib/deepseek.ts` / `lib/shop.ts` - 客户端骨架, 核心函数抛出 Not implemented
 - **P0 阻塞:** Tripo API 余额为 0 (需联系 Gavin 充值); Shop 中台 API Key 待获取 (需联系吕宝源)
 - **已知问题:** FOUC 主题闪烁 (localStorage 暗色模式首次加载先显示亮色)
