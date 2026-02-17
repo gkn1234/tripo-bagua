@@ -2,7 +2,7 @@
 'use client'
 
 import type { UIMessage } from 'ai'
-import type { BaziResult } from '@/lib/bazi/types'
+import type { AnalysisProgress, BaziResult } from '@/lib/bazi/types'
 import { CopyIcon, RefreshCwIcon } from 'lucide-react'
 import {
   Message,
@@ -21,12 +21,14 @@ import {
   Tool,
   ToolHeader,
 } from '@/components/ai-elements/tool'
+import { AnalysisCard } from './analysis-card'
 import { BaguaCard } from './bagua-card'
 import { ModelPreview } from './model-preview'
 import { OptionsButtons } from './options-buttons'
 
 const TOOL_TITLES: Record<string, string> = {
   analyzeBazi: '分析八字',
+  deepAnalysis: '深入分析',
   generateMascot: '生成 3D 模型',
   retextureMascot: '重新生成纹理',
   presentOptions: '选择',
@@ -87,6 +89,19 @@ export function ChatMessage({ message, isLast, isStreaming, onRegenerate, onSend
                   <BaguaCard
                     key={`tool-${message.id}-${index}`}
                     data={output.data as BaziResult}
+                  />
+                )
+              }
+            }
+
+            // AnalysisCard for deepAnalysis (streaming + completed)
+            if (toolName === 'deepAnalysis') {
+              if (output || state === 'partial-output-available') {
+                return (
+                  <AnalysisCard
+                    key={`tool-${message.id}-${index}`}
+                    progress={(output ?? {}) as unknown as AnalysisProgress}
+                    state={state}
                   />
                 )
               }
