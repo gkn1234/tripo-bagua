@@ -1,10 +1,10 @@
 // app/api/chat/route.ts
-import type { AnalysisNote } from '@/lib/bazi/types'
+import type { AnalysisNote, AnalysisProgress } from '@/lib/bazi/types'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { convertToModelMessages, hasToolCall, stepCountIs, streamText, tool } from 'ai'
 import { z } from 'zod'
 import { calculateBazi } from '@/lib/bazi'
-import { runAnalysis } from '@/lib/bazi/analysis-agent'
+import { runAnalysisStream } from '@/lib/bazi/analysis-agent'
 import { tripoClient } from '@/lib/tripo'
 
 const deepseek = createDeepSeek({
@@ -142,30 +142,62 @@ export async function POST(req: Request) {
     inputSchema: z.object({
       question: z.string().optional().describe('需要分析的具体问题,首次综合分析时不传'),
     }),
-    execute: async ({ question }) => {
+    async* execute({ question }) {
       if (!currentNote?.rawData) {
-        return { success: false, error: '尚未排盘，请先调用 analyzeBazi' }
+        return { phase: 'complete', error: '尚未排盘，请先调用 analyzeBazi' } as AnalysisProgress
       }
 
-      try {
-        const { fiveElements, ...dataForAnalysis } = currentNote.rawData
+      const { fiveElements, ...dataForAnalysis } = currentNote.rawData
 
-        const entry = await runAnalysis({
+      yield { phase: 'started' } as AnalysisProgress
+
+      let partialText = ''
+      const classicQueries: NonNullable<AnalysisProgress['classicQueries']> = []
+      let currentQuery: { query: string, source: string } | null = null
+      let lastYieldTime = 0
+      const THROTTLE_MS = 150
+
+      try {
+        for await (const event of runAnalysisStream({
           rawData: dataForAnalysis,
           previousNote: currentNote,
           question: question ?? null,
-        })
+        })) {
+          switch (event.type) {
+            case 'text-delta':
+              partialText += event.textDelta
+              if (Date.now() - lastYieldTime > THROTTLE_MS) {
+                yield { phase: 'analyzing', partialText, classicQueries } as AnalysisProgress
+                lastYieldTime = Date.now()
+              }
+              break
 
-        currentNote = {
-          ...currentNote,
-          analyses: [...currentNote.analyses, entry],
-          updatedAt: Date.now(),
+            case 'tool-call':
+              currentQuery = { query: event.query, source: event.source }
+              yield { phase: 'querying', query: event.query, source: event.source, partialText, classicQueries } as AnalysisProgress
+              break
+
+            case 'tool-result':
+              if (currentQuery) {
+                classicQueries.push({ query: currentQuery.query, source: currentQuery.source, results: event.results })
+              }
+              yield { phase: 'queried', classicResults: event.results, partialText, classicQueries } as AnalysisProgress
+              currentQuery = null
+              break
+
+            case 'finish':
+              currentNote = {
+                ...currentNote!,
+                analyses: [...currentNote!.analyses, event.entry],
+                updatedAt: Date.now(),
+              }
+              yield { phase: 'complete', analysisNote: currentNote, partialText, classicQueries } as AnalysisProgress
+              break
+          }
         }
-
-        return { success: true, analysisNote: currentNote }
       }
       catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : '分析失败' }
+        yield { phase: 'complete', error: error instanceof Error ? error.message : '分析失败' } as AnalysisProgress
       }
     },
   })
