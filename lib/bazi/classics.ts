@@ -1,8 +1,7 @@
 // lib/bazi/classics.ts
 
-import { existsSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { embedText } from './embedding'
+import chunksData from '@/data/classics/chunks.json'
 
 export interface ClassicChunk {
   id: string // 唯一 ID，如 "qiongtong-jia-yin"
@@ -40,11 +39,8 @@ let chunksCache: ClassicChunk[] | null = null
 export function loadChunks(): ClassicChunk[] {
   if (chunksCache)
     return chunksCache
-  const filePath = resolve(process.cwd(), 'data/classics/chunks.json')
-  if (!existsSync(filePath))
-    return []
-  chunksCache = JSON.parse(readFileSync(filePath, 'utf-8'))
-  return chunksCache!
+  chunksCache = chunksData as ClassicChunk[]
+  return chunksCache
 }
 
 export interface SearchResult {

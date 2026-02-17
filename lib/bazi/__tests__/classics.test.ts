@@ -29,9 +29,9 @@ vi.mock('../embedding', () => ({
   embedText: vi.fn().mockResolvedValue([1, 0, 0]),
 }))
 
-// Mock fs module
-vi.mock('node:fs', () => ({
-  readFileSync: vi.fn().mockReturnValue(JSON.stringify([
+// Mock chunks.json data
+vi.mock('@/data/classics/chunks.json', () => ({
+  default: [
     {
       id: 'qiongtong-jia-yin',
       content: '甲木生于寅月，阳气初生',
@@ -56,8 +56,7 @@ vi.mock('node:fs', () => ({
       keywords: ['天道'],
       embedding: [0.9, 0.1, 0],
     },
-  ])),
-  existsSync: vi.fn().mockReturnValue(true),
+  ],
 }))
 
 describe('searchClassics', () => {
