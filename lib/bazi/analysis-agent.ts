@@ -28,28 +28,28 @@ interface AnalyzeParams {
   question: string | null
 }
 
+const queryClassicsTool = tool({
+  description: '查阅命理经典著作（穷通宝鉴、子平真诠、滴天髓、渊海子平、三命通会），可查术语释义、调候用法、格局论述、纳音、神煞、干支关系、命例分析等',
+  inputSchema: z.object({
+    query: z.string().describe('查询内容，如"伤官配印"、"甲木寅月用神"、"身弱财旺"、"天乙贵人"、"甲子海中金"'),
+    source: z.enum(['all', 'ziping', 'ditian', 'qiongtong', 'yuanhai', 'sanming'])
+      .optional()
+      .default('all')
+      .describe('指定经典：ziping=子平真诠, ditian=滴天髓, qiongtong=穷通宝鉴, yuanhai=渊海子平, sanming=三命通会, all=全部'),
+  }),
+  execute: async ({ query, source }) => {
+    const results = await searchClassics(query, source as SourceKey | 'all')
+    return results.map(r => ({
+      content: r.content,
+      source: r.source,
+      chapter: r.chapter,
+      score: r.score,
+    }))
+  },
+})
+
 export async function runAnalysis({ rawData, previousNote, question }: AnalyzeParams): Promise<AnalysisEntry> {
   const userContent = buildUserPrompt({ rawData, previousNote, question })
-
-  const queryClassicsTool = tool({
-    description: '查阅命理经典著作（穷通宝鉴、子平真诠、滴天髓、渊海子平、三命通会），可查术语释义、调候用法、格局论述、纳音、神煞、干支关系、命例分析等',
-    inputSchema: z.object({
-      query: z.string().describe('查询内容，如"伤官配印"、"甲木寅月用神"、"身弱财旺"、"天乙贵人"、"甲子海中金"'),
-      source: z.enum(['all', 'ziping', 'ditian', 'qiongtong', 'yuanhai', 'sanming'])
-        .optional()
-        .default('all')
-        .describe('指定经典：ziping=子平真诠, ditian=滴天髓, qiongtong=穷通宝鉴, yuanhai=渊海子平, sanming=三命通会, all=全部'),
-    }),
-    execute: async ({ query, source }) => {
-      const results = await searchClassics(query, source as SourceKey | 'all')
-      return results.map(r => ({
-        content: r.content,
-        source: r.source,
-        chapter: r.chapter,
-        score: r.score,
-      }))
-    },
-  })
 
   const { text } = await generateText({
     model: deepseek('deepseek-chat'),
