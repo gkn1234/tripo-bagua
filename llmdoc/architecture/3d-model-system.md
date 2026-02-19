@@ -2,12 +2,12 @@
 
 ## 1. Identity
 
-- **定义:** 基于 Tripo API v2.5 的异步非阻塞 3D 模型生成管线，集成 React Three Fiber 渲染和代理路由层。
+- **定义:** 基于 Tripo API v3.0 的异步非阻塞 3D 模型生成管线，集成 React Three Fiber 渲染和代理路由层。
 - **用途:** 将 AI 工具调用转化为 3D GLB 模型，通过前端轮询追踪生成进度，最终在分屏布局中渲染展示。
 
 ## 2. 核心组件
 
-- `lib/tripo.ts` (`tripoClient`, `createTask`, `getTask`, `waitForCompletion`, `retextureModel`, `TripoTask`): Tripo API 客户端，封装任务创建、纹理重生成、状态查询和服务端轮询等待，使用模型版本 `v2.5-20250123`，API 端点 `https://api.tripo3d.ai/v2/openapi`。
+- `lib/tripo.ts` (`tripoClient`, `createTask`, `getTask`, `waitForCompletion`, `retextureModel`, `TripoTask`): Tripo API 客户端，封装任务创建、纹理重生成、状态查询和服务端轮询等待，使用模型版本 `v3.0-20250812`，API 端点 `https://api.tripo3d.ai/v2/openapi`。
 - `app/api/chat/route.ts` (`generateMascot` tool, `retextureMascot` tool): AI 工具定义。`generateMascot` 接收 prompt/style 参数，调用 `tripoClient.createTask()` 创建异步任务；`retextureMascot` 接收 taskId/prompt/textureQuality 参数，调用 `tripoClient.retextureModel()` 重新生成纹理。两者均通过 `pendingTaskId` 守卫防止重复提交。
 - `app/api/tripo/task/[id]/route.ts` (`GET`): 任务状态查询代理路由，隐藏 TRIPO_API_KEY，使用 Next.js 16 动态路由参数 (`params: Promise`)。
 - `app/api/tripo/proxy/route.ts` (`GET`): 模型文件代理路由，转发 Tripo 返回的外部 GLB URL，设置 `Content-Type: model/gltf-binary` 和 `Cache-Control: public, max-age=86400`。

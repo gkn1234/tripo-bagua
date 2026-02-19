@@ -13,7 +13,7 @@
 | 框架 | Next.js 16.1.6 (App Router) + React 19.2.3 + TypeScript |
 | AI | Vercel AI SDK 6.x (`ai`, `@ai-sdk/react`, `@ai-sdk/deepseek`) + DeepSeek Chat |
 | 八字计算 | `tyme4ts` (MIT, 干支/排盘) + `cantian-tymext` (闭源, 神煞/刑冲合会) |
-| 3D 生成 | Tripo API v2.5 (文生 3D, GLB 输出) |
+| 3D 生成 | Tripo API v3.0 (文生 3D, GLB 输出) |
 | 3D 渲染 | React Three Fiber 9.x + @react-three/drei 10.x + Three.js 0.182 |
 | 状态管理 | Zustand 5.x (非持久化, UI 状态 + analysisNote) |
 | 持久化 | IndexedDB (idb, 会话/消息/analysisNote 存储) |

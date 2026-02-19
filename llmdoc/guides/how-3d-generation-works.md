@@ -12,7 +12,7 @@
 
 ## 修改模型生成参数
 
-1. **修改 Tripo 模型版本:** 编辑 `lib/tripo.ts:39`，`model_version` 字段当前值为 `v2.5-20250123`，可替换为 Tripo 发布的新版本号。
+1. **修改 Tripo 模型版本:** 编辑 `lib/tripo.ts:39`，`model_version` 字段当前值为 `v3.0-20250812`，可替换为 Tripo 发布的新版本号。
 2. **修改生成类型:** 编辑 `lib/tripo.ts:38`，`type` 字段当前为 `text_to_model`，Tripo API 还支持 `image_to_model` 等类型。
 3. **调整 AI 的 prompt 模板:** 编辑 `app/api/chat/route.ts:41-71` 中的 `systemPrompt`，修改"Mascot Design Principles"部分可改变 AI 生成的描述风格和细节程度。
 4. **调整轮询间隔:** 编辑 `components/chat/model-preview.tsx:66-69`，setInterval 的间隔当前为 3000ms（3 秒），可根据 API 配额调整。

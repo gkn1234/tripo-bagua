@@ -116,7 +116,7 @@ Authorization: Bearer <API_KEY>
   "type": "text_to_model",
   "prompt": "a small cat sitting on a cushion",
   "negative_prompt": "low quality, blurry",
-  "model_version": "v2.5-20250123"
+  "model_version": "v3.0-20250812"
 }
 ```
 
@@ -124,7 +124,7 @@ Authorization: Bearer <API_KEY>
 |------|------|------|------|
 | `prompt` | 是 | string | 3D 模型的文本描述 |
 | `negative_prompt` | 否 | string | 不希望出现的特征描述 |
-| `model_version` | 否 | string | 模型版本号（本项目使用 `v2.5-20250123`） |
+| `model_version` | 否 | string | 模型版本号（本项目使用 `v3.0-20250812`） |
 | `texture_quality` | 否 | string | 纹理质量（`standard` / `detailed`） |
 | `texture_seed` | 否 | integer | 纹理随机种子，用于可重复生成 |
 | `face_limit` | 否 | integer | 输出模型面数限制 |
@@ -284,7 +284,7 @@ Authorization: Bearer <API_KEY>
 
 | 方法 | 对应端点 | 说明 |
 |------|------|------|
-| `tripoClient.createTask(prompt, options?)` | `POST /task` | 创建 `text_to_model` 任务，使用 `v2.5-20250123` 版本。options 支持 `negativePrompt`（可选，有默认值）。请求体自动包含 `texture_quality: 'detailed'` |
+| `tripoClient.createTask(prompt, options?)` | `POST /task` | 创建 `text_to_model` 任务，使用 `v3.0-20250812` 版本。options 支持 `negativePrompt`（可选，有默认值）。请求体自动包含 `texture_quality: 'detailed'` |
 | `tripoClient.retextureModel(originalTaskId, options?)` | `POST /task` | 创建 `texture_model` 任务，对已生成模型重新生成纹理。options 支持 `prompt`（通过 `texture_prompt.text` 传递）、`textureSeed`、`textureQuality`（`standard`/`detailed`）。自动设置 `texture: true` 和 `pbr: true` |
 | `tripoClient.getTask(taskId)` | `GET /task/{id}` | 查询任务状态和输出 |
 | `tripoClient.waitForCompletion(taskId)` | 轮询 `GET /task/{id}` | 服务端轮询等待完成（超时 120s，间隔 3s） |
